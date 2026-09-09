@@ -1,0 +1,4 @@
+# Runtime state — regenerated on first run, never commit to the shared repo
+data.json
+groundtruth.log
+node_modules/

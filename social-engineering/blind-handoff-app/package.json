@@ -1,0 +1,10 @@
+{
+  "name": "blind-handoff",
+  "version": "1.0.0",
+  "description": "Threat Model Lab Exercise 2 — a deliberately hackable classroom app for teaching identity, authorization, and audit-log forensics.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Blind Handoff (revised) — Identity & Audit Logs",
+  "schemaVersion": 1,
+  "description": "Revised Threat Model Lab Exercise 2. Refocused on authentication, authorization, and audit-log forensics. In-app game accounts (no real credentials); Red vs. Blue with role swap; MFA withheld then introduced mid-week; daily scoring that rewards precise attribution; a two-log split (editable in-app log vs. instructor append-only ground truth); one shared public student-patchable repo with a vulnerability-disclosure game (no security by obscurity, no tamper-tells by default). Static self-contained HTML, no connectors.",
+  "builtBy": "claude"
+}
+</script>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blind Handoff — Identity &amp; Audit Logs</title>
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f6f7fb;
+    --panel:#ffffff;
+    --ink:#1a1d29;
+    --muted:#5b6072;
+    --line:#e4e7f0;
+    --accent:#4f46e5;
+    --accent-soft:#eef0ff;
+    --tech:#2563eb;      --tech-bg:#e8f0ff;
+    --access:#0d9488;    --access-bg:#e2f6f3;
+    --social:#d9480f;    --social-bg:#fdeee6;
+    --avail:#9333ea;     --avail-bg:#f4e9fe;
+    --defend:#15803d;    --defend-bg:#e7f6ec;
+    --deviant:#b91c1c;   --deviant-bg:#fdeaea;
+    --red:#dc2626;       --red-bg:#fdeaea;
+    --blue:#2563eb;      --blue-bg:#e8f0ff;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55;font-size:15.5px;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:28px 20px 80px}
+  code,.mono{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em}
+  h1{font-size:27px;line-height:1.15;margin:0 0 6px;letter-spacing:-.5px}
+  h2{font-size:19px;margin:0}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 22px}
+  .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:4px 10px;border-radius:999px;margin-bottom:14px}
+
+  .recap{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:22px}
+  .recap h3{margin:0 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .rules{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  .rule{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fbfbfe}
+  .rule b{display:block;font-size:13px;letter-spacing:.03em;margin-bottom:3px}
+  .rule.c b{color:var(--tech)} .rule.a b{color:var(--avail)}
+  .rule span{font-size:13.5px;color:var(--muted)}
+  @media(max-width:640px){.rules{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;margin:14px 0;overflow:hidden;box-shadow:0 1px 2px rgba(20,20,50,.03)}
+  .card > .head{display:flex;align-items:flex-start;gap:14px;padding:18px 20px}
+  .card .num{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .card .htext{flex:1 1 auto}
+  .card .htext .tag{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .card .htext h2{margin:1px 0 3px}
+  .card .htext p{margin:0;color:var(--muted);font-size:14px}
+  .body{padding:0 20px 22px;border-top:1px solid var(--line)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
+  .meta{font-size:12px;background:#fbfbfe;border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+  .meta b{color:var(--ink)}
+  .meta span{color:var(--muted)}
+
+  .sec-h{font-size:12.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+  .setup{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.setup{grid-template-columns:1fr}}
+  .setup .box{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fbfbfe;font-size:14px}
+  .setup .box b{display:block;margin-bottom:4px;font-size:13px}
+  .setup.three{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:640px){.setup.three{grid-template-columns:1fr}}
+
+  .callout{border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:12px 15px;font-size:14px;margin:6px 0}
+  .callout b{color:var(--accent)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px}
+  @media(max-width:720px){.cols{grid-template-columns:1fr}}
+  ul.items{list-style:none;margin:0;padding:0}
+  ul.items li{border:1px solid var(--line);border-radius:10px;padding:9px 11px 9px 12px;margin-bottom:8px;font-size:13.7px;position:relative}
+  li .cat{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;margin-right:7px;vertical-align:1px}
+  li.tech{border-left:4px solid var(--tech)} li.tech .cat{background:var(--tech-bg);color:var(--tech)}
+  li.access{border-left:4px solid var(--access)} li.access .cat{background:var(--access-bg);color:var(--access)}
+  li.social{border-left:4px solid var(--social)} li.social .cat{background:var(--social-bg);color:var(--social)}
+  li.avail{border-left:4px solid var(--avail)} li.avail .cat{background:var(--avail-bg);color:var(--avail)}
+  li.def{border-left:4px solid var(--defend)}
+  li .late{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;margin-right:7px;background:var(--accent-soft);color:var(--accent)}
+  .colhead{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:9px}
+  .colhead.atk{color:var(--deviant)} .colhead.def{color:var(--defend)}
+
+  /* team badges */
+  .teams{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+  @media(max-width:640px){.teams{grid-template-columns:1fr}}
+  .team{border-radius:12px;padding:13px 15px;font-size:13.8px;border:1px solid var(--line)}
+  .team.red{background:var(--red-bg);border-color:#f3caca}
+  .team.blue{background:var(--blue-bg);border-color:#c9dcff}
+  .team b{display:block;margin-bottom:4px}
+  .team.red b{color:var(--red)} .team.blue b{color:var(--blue)}
+
+  /* week arc timeline */
+  .arc{border:1px solid var(--line);border-radius:12px;background:#fbfbfe;padding:6px 4px}
+  .step{display:flex;gap:13px;padding:12px 14px;position:relative}
+  .step:not(:last-child){border-bottom:1px dashed var(--line)}
+  .step .when{flex:0 0 92px;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);padding-top:2px}
+  .step .what{flex:1 1 auto;font-size:14px}
+  .step .what b{display:block;margin-bottom:2px}
+  .step.pivot{background:var(--accent-soft);border-radius:10px}
+  .step.pivot .when{color:var(--accent)}
+
+  .qs{list-style:none;margin:8px 0 0;padding:0}
+  .qs li{border:1px solid var(--line);background:#fbfbfe;border-radius:10px;padding:10px 13px;margin-bottom:8px;font-size:14px}
+  .qs li b{color:var(--accent)}
+
+  .deviant{margin-top:20px;border:1px solid #f3caca;background:var(--deviant-bg);border-radius:12px;padding:14px 16px}
+  .deviant .dh{font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--deviant);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .deviant p{margin:0 0 8px;font-size:14px}
+  .deviant p:last-child{margin-bottom:0}
+  .deviant .lead{font-weight:600}
+
+  /* sample audit log */
+  .log{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:4px}
+  .log table{border-collapse:collapse;width:100%;font-size:12.5px}
+  .log th,.log td{text-align:left;padding:7px 11px;border-bottom:1px solid var(--line)}
+  .log th{background:#fbfbfe;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  .log td.mono{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .log tr.flag td{background:var(--deviant-bg)}
+  .log tr.flag td:first-child{border-left:3px solid var(--deviant)}
+  .log .note{padding:9px 12px;font-size:12.5px;color:var(--muted);background:#fbfbfe}
+
+  .frame{background:linear-gradient(180deg,#1a1d29,#23263a);color:#e9ebf5;border-radius:18px;padding:24px 22px;margin-top:30px}
+  .frame h2{color:#fff;font-size:18px;margin-bottom:4px}
+  .frame p{color:#b9bed6;font-size:14px;margin:0 0 16px}
+  .fg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media(max-width:720px){.fg{grid-template-columns:1fr}}
+  .fbox{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:13px 15px}
+  .fbox b{color:#fff;font-size:13.5px} .fbox p{color:#aeb3cf;font-size:13px;margin:5px 0 0}
+  .takeaway{margin-top:16px;border-top:1px solid rgba(255,255,255,.12);padding-top:14px;font-size:14.5px;color:#eef0ff}
+  .takeaway b{color:#fff}
+
+  .foot{color:var(--muted);font-size:12.5px;text-align:center;margin-top:26px}
+  .actions{margin:18px 0 2px}
+  .btn{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  @media print{.actions{display:none} .card{break-inside:avoid} .frame{background:#1a1d29!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="kicker">Threat Model Lab · Exercise 2 · revised</span>
+  <h1>Blind Handoff</h1>
+  <p class="sub">The secret never leaves the server, and there's no proximity trick — the only way to move it is to <em>be</em> an authorized account. This version is about who you are, whether you can prove it, and how the audit log catches the times you can't.</p>
+
+  <div class="recap">
+    <h3>The mechanic you're modeling</h3>
+    <div>The secret is not a value anyone holds — it's a <b>custody state on the server</b>, attached to a logged-in identity. Blue team keeps the secret safe on a given day only if <b>every real member's account holds it</b> and <b>no attacker's account does</b>. Since there's nothing to copy or text, the only path in is impersonation: become an account you're not.</div>
+    <div class="rules">
+      <div class="rule c"><b>NO OUTSIDER HOLDS IT → Confidentiality</b><span>Custody stays with real members. Broken by phished logins, session theft, and social-engineered handoffs.</span></div>
+      <div class="rule a"><b>EVERY MEMBER HOLDS IT → Availability</b><span>Every teammate ends the day with custody. Broken by lockouts, refused handoffs, and denial.</span></div>
+    </div>
+    <div style="margin-top:12px;font-size:13.5px;color:var(--muted)">What changed from the first draft: we dropped the room-code / proximity gate — in a room where everyone is present, "be here" gates out no one. The gate is now <b style="color:var(--ink)">identity + authorization</b>, and the star of the exercise is the <b style="color:var(--ink)">audit log</b>: the place you find out what really happened after prevention fails.</div>
+  </div>
+
+  <div class="card">
+    <div class="head">
+      <div class="num">2</div>
+      <div class="htext">
+        <div class="tag">web app · in-app accounts · red vs. blue</div>
+        <h2>How it runs</h2>
+        <p>In-app game logins (nothing real is connected), one attacking team and one defending team, and roles swap so everyone plays both sides.</p>
+      </div>
+    </div>
+    <div class="body">
+      <div class="chips">
+        <div class="meta"><b>Hardware:</b> <span>None — phones/laptops</span></div>
+        <div class="meta"><b>Prep:</b> <span>High — build the web app + logging</span></div>
+        <div class="meta"><b>Coding floor:</b> <span>None (just clicking)</span></div>
+        <div class="meta"><b>Richest lesson:</b> <span>Authentication, authorization, audit logs</span></div>
+      </div>
+
+      <div class="sec-h">Identity — no real credentials at risk</div>
+      <div class="setup">
+        <div class="box"><b>In-app accounts</b>Every student gets a <b>game-only username and password</b>, handed out on a card. These live only inside the class app — no Google Workspace, no real login. Students can freely phish, guess, and steal each other's <i>game</i> credentials, so the most realistic attack in security stays on the table with <b>nothing real at stake</b>.</div>
+        <div class="box"><b>The instructor owns the log</b>Because the identity system is yours, so is the audit trail. You decide exactly what gets recorded, what each team can see, and you can seed events or plant a mole. The log is a teaching instrument, not a black box.</div>
+      </div>
+
+      <div class="sec-h">Structure — red vs. blue, then swap</div>
+      <div class="teams">
+        <div class="team blue"><b>◆ Blue (defenders)</b>Hold the secret. Keep custody among your real members, protect your logins, and — critically — <b>read the audit log and file a short incident report</b> each round: were we breached, by whom, and which log lines prove it?</div>
+        <div class="team red"><b>◇ Red (attackers)</b>Get an unauthorized account to hold Blue's secret, or lock a Blue member out — and try to do it without leaving an obvious trail. Every move you make writes to the same log Blue will read.</div>
+      </div>
+      <div class="callout" style="margin-top:12px"><b>The swap is the point.</b> After a round, teams trade roles. Having just attacked, defenders know what the log should have caught; having just defended, attackers know what tracks to cover. Both sides converge on the same idea: prevention is never perfect, so detection matters.</div>
+
+      <div class="sec-h">The handoff, re-gated on identity</div>
+      <div class="setup three">
+        <div class="box"><b>1 · Seed</b>Each morning the server names one Blue member the day's <b>Source</b> — shown only as a status, never a copyable value. The Source alone carries one extra, dangerous privilege: <b>they can edit the log</b>.</div>
+        <div class="box"><b>2 · Pass freely</b>Any account that currently holds the secret may pass it to <b>any other account</b> — there is no recipient or roster check by default. Confirming that the receiver is a real teammate is Blue's problem, not the server's. No room code, no Wi-Fi check.</div>
+        <div class="box"><b>3 · Server records</b>The server moves custody and writes every login, pass, and log edit to the audit trail. It does not vouch for <i>who</i> was really at the keyboard.</div>
+      </div>
+
+      <div class="callout"><b>Why "just text it" fails:</b> there is no secret to text — it's server-side custody bound to an authenticated account. To gain it you must complete an authorized handoff <i>as</i> a legitimate identity. You can't SMS what you're never allowed to hold, so the whole contest becomes a fight over identity.</div>
+      <div class="callout" style="border-color:var(--access);background:var(--access-bg)"><b style="color:var(--access)">Level playing field:</b> core gameplay is pure clicking. The strong programmer's instinct — inspect the network tab or DOM for the secret — finds nothing, because the value is entirely server-side. That very dead end is your "why we don't trust the client" moment, and it steers everyone toward the real game: identity.</div>
+      <div class="callout" style="border-color:var(--defend);background:var(--defend-bg)"><b style="color:var(--defend)">No security by obscurity:</b> the app's full source is public, and an <b>advanced defensive track lets teams patch it</b> — mirroring a world where code leaks and secrecy buys you nothing. Attackers read it to find weaknesses; defenders read it to close them. Coding skill re-enters not as a hidden edge but as the honest work of fixing what you can see.</div>
+
+      <div class="sec-h">The week arc — MFA is withheld, then introduced as the fix</div>
+      <div class="arc">
+        <div class="step">
+          <div class="when">Days 1–2</div>
+          <div class="what"><b>Password only</b>A single factor guards every account. Phishing works. Someone logs in as a victim and authorizes a handoff to their own account — and the log attributes the theft <i>to the victim</i>. Blue's first incident report blames its own teammate.</div>
+        </div>
+        <div class="step pivot">
+          <div class="when">Midweek</div>
+          <div class="what"><b>Introduce MFA — the pivot</b>Only after the class feels the sting do you turn on a second factor: an in-app code the instructor's "authenticator" issues. Suddenly a stolen password alone is not enough. Students experience <i>why</i> the control exists instead of being handed it as a rule.</div>
+        </div>
+        <div class="step">
+          <div class="when">Days 4–5</div>
+          <div class="what"><b>Attacks move; detection matures</b>Blocked on passwords, Red shifts to session theft, social-engineered authorizations, and covering tracks. Blue leans harder on the log — new-device logins, impossible timing, one device driving several accounts — and detection becomes the main event.</div>
+        </div>
+      </div>
+
+      <div class="sec-h">Daily scoring</div>
+      <ul class="qs">
+        <li><b>Availability —</b> Blue <b>+1</b> if every member has been passed the secret by day's end.</li>
+        <li><b>Infiltration —</b> Red <b>+2</b> if any Red account gained custody; if none did, Blue <b>+2</b> — <b>but only when Blue also passed the secret to every member.</b> Hoarding it with one or two people to shrink the attack surface earns nothing.</li>
+        <li><b>Detection</b> (only when Red infiltrated) — Blue <b>+1</b> for identifying that an infiltration happened, and <b>+2 more</b> for correctly naming the account. If Blue identifies neither, Red <b>+1</b>.</li>
+      </ul>
+      <div class="log">
+        <table>
+          <thead><tr><th>Day outcome (all members passed unless noted)</th><th>Red</th><th>Blue</th><th>Blue net</th></tr></thead>
+          <tbody>
+            <tr><td>No infiltration</td><td class="mono">0</td><td class="mono">3</td><td class="mono">+3</td></tr>
+            <tr class="flag"><td>No infiltration, but Blue hoarded (not all passed)</td><td class="mono">0</td><td class="mono">0</td><td class="mono">0</td></tr>
+            <tr><td>Infiltrated · account correctly named</td><td class="mono">2</td><td class="mono">4</td><td class="mono">+2</td></tr>
+            <tr><td>Infiltrated · sensed, not attributed</td><td class="mono">2</td><td class="mono">2</td><td class="mono">0</td></tr>
+            <tr class="flag"><td>Infiltrated · undetected</td><td class="mono">3</td><td class="mono">1</td><td class="mono">-2</td></tr>
+          </tbody>
+        </table>
+        <div class="note">Read the last column. A <b>flawless prevented day with a full pass (+3)</b> is Blue's best possible outcome — better than catching a full breach (+2), because a breach still hands Red two points. Hoarding to stay safe now earns nothing, since the no-infiltration reward requires passing to everyone. And within a breach, <b>naming the account is the biggest single swing (+2 over merely sensing it)</b>, so precise log forensics is what claws a day back. Red's counterplay is to attack <i>attribution</i>: log in as a victim, or seize the Source and delete the lines that name you.</div>
+      </div>
+
+      <div class="sec-h">Shared repo &amp; the disclosure game</div>
+      <div class="callout"><b>One public repository for the whole class.</b> Both teams read every line, so no defense is ever secret and a vulnerability is a bug for everyone at once. Because the same code runs everywhere, a flaw one team finds can be turned against them the moment roles swap — a zero-day is a weapon on offense and a liability on defense.</div>
+      <ul class="qs">
+        <li><b>Vulnerability discovered — +4.</b> The first team to document a real vulnerability, with a working reproduction, scores 4.</li>
+        <li><b>Patch accepted — +2.</b> A patch that closes a vulnerability and is merged into the shared repo scores 2 — and the fixer need not be the finder, so a team that spots a flaw it can't code still banks the discovery.</li>
+      </ul>
+      <div class="callout" style="border-color:var(--avail);background:var(--avail-bg)"><b style="color:var(--avail)">The dilemma:</b> hoard the bug and exploit it quietly, or disclose it for the points and harden the whole class? Whoever moves first takes the credit, so sitting on a zero-day is a bet that no one else has found it — the vulnerability-equities problem in miniature.</div>
+
+      <div class="sec-h">Attack surface &nbsp;·&nbsp; Defenses</div>
+      <div class="cols">
+        <div>
+          <div class="colhead atk">◇ How Blue gets broken</div>
+          <ul class="items">
+            <li class="social"><span class="cat">Social</span>Phish a rival's <i>game</i> login with a lookalike sign-in page and harvest the password.</li>
+            <li class="tech"><span class="cat">Tech</span>Guess or crack a weak, reused, or obvious password.</li>
+            <li class="tech"><span class="cat">Tech</span>Hijack a live session — grab a token from a left-open device or a shared link — and act without ever knowing the password.</li>
+            <li class="social"><span class="cat">Social</span>"It's me, your teammate — authorize the handoff to my account." An <b>authorization</b> attack: the identity is real, the intent is not.</li>
+            <li class="tech"><span class="cat">Tech</span>Forge a client-supplied role or team field if the server naively trusts it (privilege escalation).</li>
+            <li class="access"><span class="cat">Access</span>Log in as a teammate on a shared or left-open device.</li>
+            <li class="avail"><span class="cat">Denial</span>Lock a member out with repeated bad logins, or simply never confirm a handoff — stranding a teammate.</li>
+            <li class="social"><span class="cat">Social</span><b>The deep one:</b> log in <i>as the victim</i> so every malicious action is attributed to them in the log — attack and alibi in one move.</li>
+            <li class="access"><span class="cat">Access</span><b>The deepest:</b> compromise the <b>Source</b> — the one account that can edit the log — and delete the lines that name you. Nothing in the default build leaves a tamper-tell.</li>
+            <li class="tech"><span class="cat">Tech</span>Read the public source for a flaw and exploit it before the defenders find and patch the same line.</li>
+          </ul>
+        </div>
+        <div>
+          <div class="colhead def">◆ How Blue defends</div>
+          <ul class="items">
+            <li class="def">Enforce strong, unique passwords; the app rejects weak ones. Don't reuse the card you were handed as-is.</li>
+            <li class="def"><span class="late">Added midweek</span><b>MFA:</b> a second factor so a phished or guessed password alone can't log in.</li>
+            <li class="def">Build the check-the-URL habit; never enter your game login on a page you reached from a DM.</li>
+            <li class="def">Log out and lock devices; the server expires idle sessions and flags concurrent logins.</li>
+            <li class="def">Confirm identity <b>out-of-band</b> before authorizing any handoff — a face, not a message.</li>
+            <li class="def">Authorize server-side against the roster; never trust a role or team the client claims.</li>
+            <li class="def"><b>Read the log.</b> Hunt for logins from new devices, impossible timing, and one device driving many accounts — the signatures of impersonation.</li>
+            <li class="def"><b>Patch the app (advanced track).</b> The source is public — read it. Add a recipient check so custody can't be passed off-roster, require reauthentication before a password change or a handoff, and make the log append-only so even a compromised Source can't quietly erase it.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="sec-h">Two logs — one you can edit, one you can't</div>
+      <div class="setup">
+        <div class="box"><b>The in-app log (in play)</b>What both teams see and fight over. The <b>Source can edit it</b>, and by default edits leave no trace. This is the contested artifact: seize the Source and you can rewrite the record of what you did. Securing it — making it append-only, restricting who can edit — is a patch Blue has to write, not a feature we ship.</div>
+        <div class="box"><b>The instructor's ground-truth log</b>A separate, append-only record no student can reach or patch — it lives outside the public codebase, in the un-touchable trust boundary. This is the authority for <b>scoring</b>: when Blue names an infiltrating account, you adjudicate against this, not the log the attacker may have doctored. That split — local logs vs. a centralized immutable store — is exactly how real systems survive a compromised insider.</div>
+      </div>
+
+      <div class="sec-h">What the in-app log looks like (sample for the debrief)</div>
+      <div class="log">
+        <table>
+          <thead><tr><th>Time</th><th>Account</th><th>Event</th><th>Device / session</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">08:41</td><td>maya_b</td><td>login</td><td class="mono">sess-1a · laptop-17</td></tr>
+            <tr><td class="mono">08:44</td><td>maya_b</td><td>custody: received (Source)</td><td class="mono">sess-1a · laptop-17</td></tr>
+            <tr class="flag"><td class="mono">14:52</td><td>maya_b</td><td>login</td><td class="mono">sess-9f · phone-new</td></tr>
+            <tr class="flag"><td class="mono">14:53</td><td>maya_b</td><td>handoff authorized → dev_r</td><td class="mono">sess-9f · phone-new</td></tr>
+            <tr><td class="mono">14:53</td><td>dev_r</td><td>handoff confirmed</td><td class="mono">sess-3c · laptop-04</td></tr>
+          </tbody>
+        </table>
+        <div class="note">The theft is <b>attributed to maya_b</b> — but the tell is the 14:52 login from a brand-new device mid-afternoon, seconds before a handoff to a non-teammate. Attribution is a claim; the anomaly is the evidence.</div>
+      </div>
+
+      <div class="deviant">
+        <div class="dh">☠ Through the eyes of a deviant genius</div>
+        <p class="lead">"I don't break in. I log in as you."</p>
+        <p>They stand up a pixel-perfect fake game-login, drop the link in a "class logistics" chat, and harvest a Blue member's password before lunch. Then they log in as that member and authorize a handoff to their own account. The custody change is <b>real and legitimate-looking</b>, and the log records it under the victim's name — so Blue's incident report opens by accusing its own teammate.</p>
+        <p>That single move is the whole lesson: <b>the log records the session, not the person — attribution is a claim, not proof.</b> It's exactly why you raise the bar with MFA (make it hard to <i>be</i> that session) and why you read the log for anomalies (the new-device login seconds before the handoff is the only thread that unravels the alibi).</p>
+        <p>Their end-game is the Source itself: seize the one account allowed to edit the log, delete the lines that name them, and let Blue accuse a ghost. Nothing in the default build stops it — that's the point. The countermeasure isn't a rule you hand out; it's a patch Blue has to find in the public source and write for themselves.</p>
+      </div>
+
+      <div class="sec-h">Debrief questions</div>
+      <ul class="qs">
+        <li><b>Who actually did it —</b> and how do you <i>know</i>, from the log, rather than from who it's attributed to?</li>
+        <li><b>One control —</b> which single defense (MFA, logging out, server-side authorization) would have stopped this breach outright?</li>
+        <li><b>Cover-up —</b> what could the attacker have done to be uncatchable, and what extra logging would have closed that gap?</li>
+        <li><b>After MFA —</b> once passwords stopped being enough, where did the attacks move, and why?</li>
+      </ul>
+
+      <div class="sec-h">Implementation notes — the starting build (intentionally weak &amp; patchable)</div>
+      <div class="callout" style="border-color:var(--social);background:var(--social-bg)"><b style="color:var(--social)">Read me first:</b> the settings below are not oversights — they are the deliberately soft defaults the app ships with. Discovering them and hardening them (by habit or by patch) <i>is</i> the game. The source is public to both teams from day one.</div>
+      <div class="setup">
+        <div class="box"><b>Sessions &amp; reauth</b>Students stay logged in by default, and a password change requires no reauthentication. A walked-away, unlocked device is fully exploitable.</div>
+        <div class="box"><b>Device policy</b>Logins are allowed only from laptops, never phones — laptops are the ones left open on desks.</div>
+        <div class="box"><b>Phishing surface</b>Multiple vectors are viable from the outset: email, tab-napping, and in-person social engineering.</div>
+        <div class="box"><b>Custody passing</b>Any account holding the secret may pass it to any other account. No recipient or roster restriction by default.</div>
+        <div class="box"><b>Log editing</b>Only the Source may edit the in-app log, and edits leave no tamper-tell. Making the log append-only is left to the students to patch.</div>
+        <div class="box"><b>Public, patchable source</b>The whole codebase is readable by both teams; an advanced defensive track may modify it. No security by obscurity.</div>
+        <div class="box"><b>Ground-truth log</b>A separate append-only log, outside the student-patchable code, is the authority for scoring — students can neither read nor alter it.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame">
+    <h2>Tie it back to the frameworks</h2>
+    <p>This version is built to headline the two STRIDE letters the original barely touched.</p>
+    <div class="fg">
+      <div class="fbox"><b>Spoofing (identity)</b><p>Every marquee attack is someone pretending to be someone else — phished logins, hijacked sessions, forged roles. The defenses are exactly how real systems answer "prove it": passwords, MFA, server-side authorization.</p></div>
+      <div class="fbox"><b>Repudiation (audit logs)</b><p>"I didn't do that" — but the log says you did. When an attacker acts as the victim, the log's attribution is wrong, and the class learns why tamper-resistant, anomaly-aware logging is what makes actions provable.</p></div>
+      <div class="fbox"><b>CIA still holds</b><p>The two rules remain Confidentiality (no outsider holds it) and Availability (every member does). Integrity shows up when a handoff's authorization is forged — a custody change that shouldn't have been allowed.</p></div>
+    </div>
+    <div class="takeaway"><b>The punchline of this exercise:</b> prevention will fail, and when it does, the audit log is where you find out who — but only if you built it to record the right things and someone actually reads it. The teams that lose aren't beaten by a clever hack; they're beaten by the log line they never looked at.</div>
+  </div>
+
+  <div class="actions">
+    <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+  <div class="foot">Threat Model Lab · Exercise 2, revised for identity &amp; audit logs · adapt freely for your class</div>
+
+</div>
+</body>
+</html>
