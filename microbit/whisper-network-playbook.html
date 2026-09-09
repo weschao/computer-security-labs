@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whisper Network — Attack &amp; Defense Playbook</title>
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f6f7fb; --panel:#fff; --ink:#1a1d29; --muted:#5b6072; --line:#e4e7f0;
+    --accent:#4f46e5; --accent-soft:#eef0ff;
+    --crypto:#2563eb;  --crypto-bg:#e8f0ff;
+    --radio:#0d9488;   --radio-bg:#e2f6f3;
+    --access:#a16207;  --access-bg:#fbf3e0;
+    --social:#d9480f;  --social-bg:#fdeee6;
+    --denial:#9333ea;  --denial-bg:#f4e9fe;
+    --defend:#15803d;  --defend-bg:#e9f7ee;
+    --warn:#b91c1c;    --warn-bg:#fdeaea;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.55;font-size:15.5px}
+  .wrap{max-width:1000px;margin:0 auto;padding:28px 20px 80px}
+  code,.mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.88em;background:#eef0f6;padding:1px 5px;border-radius:5px}
+  h1{font-size:27px;line-height:1.15;margin:0 0 6px;letter-spacing:-.5px}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 20px}
+  .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:4px 10px;border-radius:999px;margin-bottom:14px}
+
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 20px;margin-bottom:16px}
+  .box h3{margin:0 0 8px;font-size:12.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+  .rules{margin:0;padding-left:18px;font-size:14px;color:#33384a}
+  .rules li{margin:3px 0}
+  .rules b{color:var(--ink)}
+
+  .strip{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+  @media(max-width:680px){.strip{grid-template-columns:1fr}}
+  .strip .card2{border-radius:14px;padding:14px 16px;font-size:13.8px}
+  .strip .off{background:var(--warn-bg);border:1px solid #f3caca}
+  .strip .off b{color:var(--warn)}
+  .strip .kerck{background:var(--crypto-bg);border:1px solid #cdddff}
+  .strip .kerck b{color:var(--crypto)}
+
+  .tension{border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 12px 12px 0;padding:14px 16px;margin-bottom:18px;font-size:14.5px}
+  .tension b{color:var(--accent)}
+
+  /* filter bar */
+  .filterbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0 10px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+  .filterbar .lbl{font-size:12px;color:var(--muted);margin-right:4px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;cursor:pointer;margin:3px 4px 3px 0;user-select:none}
+  .chip .dot{width:9px;height:9px;border-radius:50%}
+  .chip[data-cat=crypto] .dot{background:var(--crypto)} .chip[data-cat=radio] .dot{background:var(--radio)}
+  .chip[data-cat=access] .dot{background:var(--access)} .chip[data-cat=social] .dot{background:var(--social)}
+  .chip[data-cat=denial] .dot{background:var(--denial)}
+  .chip.off{opacity:.3} .chip:hover{border-color:var(--accent)}
+  .chip.skill{border-style:dashed}
+
+  .phase{margin-top:22px}
+  .phase-h{display:flex;align-items:center;gap:12px;margin:0 0 4px}
+  .phase-h .pn{width:30px;height:30px;border-radius:9px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:0 0 auto}
+  .phase-h h2{font-size:18px;margin:0}
+  .phase-sub{color:var(--muted);font-size:13.5px;margin:2px 0 12px 42px}
+
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+  @media(max-width:680px){.row{grid-template-columns:1fr}}
+  .atk,.def{padding:12px 14px}
+  .atk{border-right:1px solid var(--line)}
+  @media(max-width:680px){.atk{border-right:none;border-bottom:1px solid var(--line)}}
+  .atk .t,.def .t{font-weight:700;font-size:14px;margin-bottom:3px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .atk p,.def p{margin:0;font-size:13.4px;color:#3a3f52}
+  .def{background:#fbfdfb}
+  .def .t{color:var(--defend)}
+  .def .t::before{content:"◆";font-size:11px}
+  .atk .t::before{content:"◇";font-size:11px;color:var(--warn)}
+  .tags{display:inline-flex;gap:5px;flex-wrap:wrap}
+  .tag{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px}
+  .tag.crypto{background:var(--crypto-bg);color:var(--crypto)} .tag.radio{background:var(--radio-bg);color:var(--radio)}
+  .tag.access{background:var(--access-bg);color:var(--access)} .tag.social{background:var(--social-bg);color:var(--social)}
+  .tag.denial{background:var(--denial-bg);color:var(--denial)}
+  .tag.easy{background:#eef7ee;color:#2f7d32;border:1px solid #cfe8cf}
+  .tag.adv{background:#f3edfb;color:#6b21a8;border:1px solid #e2d3f5}
+  .row.hide{display:none}
+  .lead{border-left:3px solid var(--line);padding-left:10px;margin:2px 0 12px 42px;font-size:13.4px;color:var(--muted)}
+  .lead b{color:var(--ink)}
+
+  .patch{background:var(--warn-bg);border:1px solid #f3caca;border-radius:16px;padding:18px 20px;margin-top:24px}
+  .patch h2{color:var(--warn);font-size:18px;margin:0 0 4px}
+  .patch>p{color:#7a2b2b;font-size:14px;margin:0 0 14px}
+  .patchrow{background:#fff;border:1px solid #f0d2d2;border-radius:11px;padding:11px 14px;margin-bottom:9px}
+  .patchrow .t{font-weight:700;font-size:14px;margin-bottom:2px}
+  .patchrow p{margin:0;font-size:13.4px;color:#3a3f52}
+  .patchrow .fix{margin-top:6px;font-size:13px;color:var(--defend)}
+  .patchrow .fix b{color:var(--defend)}
+
+  .teach{background:linear-gradient(180deg,#1a1d29,#23263a);color:#e9ebf5;border-radius:18px;padding:22px;margin-top:26px}
+  .teach h2{color:#fff;font-size:18px;margin:0 0 12px}
+  .tg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:680px){.tg{grid-template-columns:1fr}}
+  .tbox{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:11px;padding:11px 13px}
+  .tbox b{color:#fff;font-size:13.5px} .tbox p{color:#aeb3cf;font-size:12.8px;margin:4px 0 0}
+
+  .note{font-size:13px;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:12px 15px;margin-top:18px}
+  .note b{color:var(--ink)}
+  .actions{margin:20px 0 2px}
+  .btn{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .foot{color:var(--muted);font-size:12.5px;text-align:center;margin-top:22px}
+  @media print{.filterbar,.actions{display:none} .row,.patchrow{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="kicker">Whisper Network · Playbook</span>
+  <h1>Attack &amp; Defense Playbook</h1>
+  <p class="sub">What your students will try, and how a group defends — mapped to the exact rules and scoring you specified. Each attack sits beside the defense that answers it.</p>
+
+  <div class="box">
+    <h3>The board</h3>
+    <ul class="rules">
+      <li>Start of class: you transmit each group's 128-bit key <b>using that group's own software</b>. Default starter code sends it <b>full power, unencrypted</b>.</li>
+      <li>Members may move freely but <b>can't leave the room</b>; devices stay in play the whole class.</li>
+      <li>Groups submit custom software for the next day — and <b>all submitted software is made public</b>.</li>
+      <li>Final 10 min: you sweep the room, challenging each device with a <span class="mono">(groupID, nonce)</span>.</li>
+      <li><b>+1</b> for each of your members who answers <i>your</i> challenge correctly · <b>+5</b> if any of your devices answers a <i>different</i> group's challenge.</li>
+    </ul>
+  </div>
+
+  <div class="strip">
+    <div class="card2 off"><b>Offense is subsidized.</b> One cracked rival = +5, and a single device can hoard several groups' keys (+5 each). Your own defense tops out at group size (3–5). Expect an <b>espionage-dominant meta</b> — most effort will go into stealing, not hiding.</div>
+    <div class="card2 kerck"><b>Code is public → Kerckhoffs's principle.</b> Tomorrow everyone reads your source. Security can live <b>only in the key</b>, never in a clever secret algorithm. This also levels skill: weak coders can copy strong crypto, so the edge shifts to protocol design, physical play, and social moves.</div>
+  </div>
+
+  <div class="tension">
+    <b>The central tension.</b> Since the algorithm is public, your only real secret is <b>key material loaded out-of-band</b> (not present in the code you hand in). But every member must know that key to earn its <span class="mono">+1</span> — so <b>every teammate is also a leak path</b>. Confidentiality (few knowers) and availability (all must know) pull in opposite directions. Bigger groups score more <span class="mono">+1</span>s but expose more insiders.
+  </div>
+
+  <div class="filterbar">
+    <span class="lbl">Filter attacks:</span>
+    <span class="chip" data-cat="crypto"><span class="dot"></span>Crypto / protocol</span>
+    <span class="chip" data-cat="radio"><span class="dot"></span>Radio / physical</span>
+    <span class="chip" data-cat="access"><span class="dot"></span>Access control</span>
+    <span class="chip" data-cat="social"><span class="dot"></span>Social / insider</span>
+    <span class="chip" data-cat="denial"><span class="dot"></span>Denial</span>
+    <span class="chip skill" data-skill="easy" style="margin-left:8px">◱ Accessible only</span>
+    <span class="chip skill" data-skill="adv">◱ Advanced only</span>
+  </div>
+
+  <!-- PHASE 1 -->
+  <div class="phase">
+    <div class="phase-h"><div class="pn">1</div><h2>Seeding — the opening broadcast</h2></div>
+    <div class="phase-sub">You transmit the key using the group's software. If that software is weak, <i>you</i> leak their key for them. Goal: only the group's own devices learn the key.</div>
+
+    <div class="row" data-cat="radio" data-skill="easy">
+      <div class="atk"><div class="t">Passive sniff of the default broadcast <span class="tags"><span class="tag radio">Radio</span><span class="tag easy">Accessible</span></span></div><p>Day 1 code sends full-power cleartext. Sit on each radio group in turn (<span class="mono">radio.setGroup</span>), log every packet to serial, read off every key. ~6 blocks.</p></div>
+      <div class="def"><div class="t">Encrypt under an out-of-band key</div><p>Pre-share a group key <b>in person before class</b>; transmit only <span class="mono">E(groupKey, dayKey)</span>. Eavesdroppers get ciphertext. This forces the real lesson: bootstrapping a secret channel.</p></div>
+    </div>
+
+    <div class="row" data-cat="crypto" data-skill="adv">
+      <div class="atk"><div class="t">Break home-made crypto <span class="tags"><span class="tag crypto">Crypto</span><span class="tag adv">Advanced</span></span></div><p>A group invents a cipher (short-key XOR, LFSR, "reverse the bytes"). Because the source is public, it's a paper exercise to reverse it.</p></div>
+      <div class="def"><div class="t">Use vetted crypto, secret only in the key</div><p>Use provided AES/HMAC blocks; never roll your own. Assume the attacker has your source — because they literally do.</p></div>
+    </div>
+
+    <div class="row" data-cat="crypto" data-skill="adv">
+      <div class="atk"><div class="t">Keystream / IV reuse (two-time pad) <span class="tags"><span class="tag crypto">Crypto</span><span class="tag adv">Advanced</span></span></div><p>If the same keystream encrypts two messages, XOR the ciphertexts and peel them apart — no key needed.</p></div>
+      <div class="def"><div class="t">Fresh random IV every message</div><p>Never reuse an IV/counter under one key; send the IV in the clear alongside the ciphertext.</p></div>
+    </div>
+
+    <div class="row" data-cat="crypto" data-skill="easy">
+      <div class="atk"><div class="t">Read the hardcoded secret <span class="tags"><span class="tag crypto">Crypto</span><span class="tag easy">Accessible</span></span></div><p>The Kerckhoffs trap: a group bakes its group key into the source as a constant — then submits the source publicly. Free key for everyone.</p></div>
+      <div class="def"><div class="t">Keep secrets out of submitted code</div><p>Load key material out-of-band (typed in via buttons at class start, or provisioned by a separate program) so the public source contains none of it.</p></div>
+    </div>
+
+    <div class="row" data-cat="radio" data-skill="adv">
+      <div class="atk"><div class="t">Spoof the seed source / force a re-send <span class="tags"><span class="tag radio">Radio</span><span class="tag adv">Advanced</span></span></div><p>Impersonate the instructor's transmitter to re-seed a victim with a chosen key, or replay a "send again" trigger to make them re-broadcast so you can capture it.</p></div>
+      <div class="def"><div class="t">Authenticate the source; ignore re-seeds</div><p>Accept a key only from an authenticated sender; treat the day's seed as one-shot and refuse unsolicited re-transmission requests.</p></div>
+    </div>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="phase">
+    <div class="phase-h"><div class="pn">2</div><h2>Propagation — getting it to every member</h2></div>
+    <div class="phase-sub">Every member needs the key for its <span class="mono">+1</span>, but each hop is a chance to leak or be blocked. This is confidential multicast to the member set — under everyone's noses.</div>
+
+    <div class="row" data-cat="radio" data-skill="easy">
+      <div class="atk"><div class="t">Sniff an in-clear re-share <span class="tags"><span class="tag radio">Radio</span><span class="tag easy">Accessible</span></span></div><p>Members who received the key relay it to a straggler in plaintext; a listener grabs it on the second hop even if the first was protected.</p></div>
+      <div class="def"><div class="t">Encrypt every hop, not just the first</div><p>All peer-to-peer sharing uses the group key too. There is no "safe" internal broadcast.</p></div>
+    </div>
+
+    <div class="row" data-cat="access" data-skill="easy">
+      <div class="atk"><div class="t">Imposter "member" (Sybil) <span class="tags"><span class="tag access">Access</span><span class="tag easy">Accessible</span></span></div><p>An outsider device claims to be a groupmate to be handed the key. If membership isn't checked, the key walks out the door.</p></div>
+      <div class="def"><div class="t">Mutually authenticate membership</div><p>Prove group membership (possession of the group key) <i>before</i> sharing anything; challenge–response both directions.</p></div>
+    </div>
+
+    <div class="row" data-cat="crypto" data-skill="adv">
+      <div class="atk"><div class="t">Man-in-the-middle a peer exchange <span class="tags"><span class="tag crypto">Crypto</span><span class="tag adv">Advanced</span></span></div><p>Relay a two-device key setup, sitting invisibly in the middle and learning what passes through.</p></div>
+      <div class="def"><div class="t">Compare an authentication string</div><p>After a peer exchange, verbally compare a short fingerprint in person; a mismatch reveals the man in the middle.</p></div>
+    </div>
+
+    <div class="row" data-cat="denial" data-skill="easy">
+      <div class="atk"><div class="t">Jam a member off the air <span class="tags"><span class="tag denial">Denial</span><span class="tag easy">Accessible</span></span></div><p>Flood a radio group so one teammate never receives the key and loses their <span class="mono">+1</span>. Cheap and requires no cryptography at all.</p></div>
+      <div class="def"><div class="t">Redundancy + physical fallback</div><p>Multiple members can re-seed each other; add retries and hop radio groups; if all else fails, huddle and re-share at arm's length.</p></div>
+    </div>
+
+    <div class="row" data-cat="social" data-skill="easy">
+      <div class="atk"><div class="t">Turn a member (insider leak / defection) <span class="tags"><span class="tag social">Insider</span><span class="tag easy">Accessible</span></span></div><p>The key must live in every teammate's head/device. Bribe, befriend, or collude with one of them and confidentiality is gone — no packets intercepted.</p></div>
+      <div class="def"><div class="t">Minimize and compartmentalize (imperfectly)</div><p>Keep the raw key on devices, not spoken aloud; run smaller groups to shrink the insider surface — accepting fewer <span class="mono">+1</span>s in exchange. There is no clean fix; that's the point.</p></div>
+    </div>
+  </div>
+
+  <!-- PHASE 3 -->
+  <div class="phase">
+    <div class="phase-h"><div class="pn">3</div><h2>The Sweep — proving it, and stealing the +5</h2></div>
+    <div class="phase-sub">Fresh nonces mean a device must actually <i>compute</i> a response, so an attacker needs the key — or a victim device willing to compute for them. This phase is where the +5 is won.</div>
+
+    <div class="row" data-cat="crypto" data-skill="easy">
+      <div class="atk"><div class="t">Answer with a stolen key (+5) <span class="tags"><span class="tag crypto">Crypto</span><span class="tag easy">Accessible</span></span></div><p>Any key captured in Phase 1–2 lets your device compute <span class="mono">HMAC(theirKey, nonce)</span> on the spot and claim the +5. This is the whole payoff of espionage.</p></div>
+      <div class="def"><div class="t">(As victim) never let the key escape</div><p>Everything in Phases 1–2, plus <b>zeroize the key</b> once your own sweep is done so a late theft is worthless.</p></div>
+    </div>
+
+    <div class="row" data-cat="crypto" data-skill="adv">
+      <div class="atk"><div class="t">Relay / wormhole attack (+5, no key!) <span class="tags"><span class="tag crypto">Protocol</span><span class="tag adv">Advanced</span></span></div><p>You never learned the key. During the sweep you relay the instructor's challenge to a victim's device, get its answer over radio, and present it as your own. Possessing a willing signer ≈ possessing the key.</p></div>
+      <div class="def"><div class="t">Don't be a signing oracle + distance-bound</div><p>Only answer a challenger you've authenticated (the real Checker), and enforce a tight response deadline so a relayed round-trip is too slow to pass.</p></div>
+    </div>
+
+    <div class="row" data-cat="crypto" data-skill="easy">
+      <div class="atk"><div class="t">Signing-oracle abuse <span class="tags"><span class="tag crypto">Protocol</span><span class="tag easy">Accessible</span></span></div><p>If a victim's device will compute a response to <i>any</i> nonce from <i>anyone</i>, just ask it. A naive "reply to every challenge" loop hands out proofs to rivals.</p></div>
+      <div class="def"><div class="t">Authenticate the challenger; lock after use</div><p>Respond only to the authenticated Checker; rate-limit; go silent once the legitimate sweep has scored you.</p></div>
+    </div>
+
+    <div class="row" data-cat="crypto" data-skill="adv">
+      <div class="atk"><div class="t">Predict the nonce → precompute / replay <span class="tags"><span class="tag crypto">Crypto</span><span class="tag adv">Advanced</span></span></div><p>If nonces are weak or repeat across days, record a victim's answer and replay it, or precompute responses ahead of the sweep.</p></div>
+      <div class="def"><div class="t">Use the full, fresh nonce every time</div><p>Bind responses to the complete instructor nonce; never cache or reuse a response. (Relies on the instructor issuing strong, unpredictable nonces.)</p></div>
+    </div>
+
+    <div class="row" data-cat="crypto" data-skill="adv">
+      <div class="atk"><div class="t">Guess / forge a weak response <span class="tags"><span class="tag crypto">Crypto</span><span class="tag adv">Advanced</span></span></div><p>If the response is a short or truncated code, the answer space is small enough to guess in the time allowed.</p></div>
+      <div class="def"><div class="t">Full-length standard MAC</div><p>Use a full HMAC output so forgery/guessing is infeasible.</p></div>
+    </div>
+
+    <div class="row" data-cat="access" data-skill="easy">
+      <div class="atk"><div class="t">Borrow / steal a victim device <span class="tags"><span class="tag access">Access</span><span class="tag easy">Accessible</span></span></div><p>Grab an unattended device during the sweep so it answers for you, or clone its key. Movement is allowed and devices can't leave — so they're all within reach.</p></div>
+      <div class="def"><div class="t">Physical custody + lock + zeroize</div><p>Never set the device down; PIN-lock the response action; wipe the key immediately after your own sweep.</p></div>
+    </div>
+
+    <div class="row" data-cat="access" data-skill="adv">
+      <div class="atk"><div class="t">Spoof device identity to misattribute <span class="tags"><span class="tag access">Access</span><span class="tag adv">Advanced</span></span></div><p>Confuse the Checker's attribution so a response is credited to the wrong device/group, or inject responses on another group's behalf.</p></div>
+      <div class="def"><div class="t">Signed, identity-bound responses</div><p>Responses include an authenticated device identity so the Checker credits the right device; the Checker verifies who actually answered.</p></div>
+    </div>
+  </div>
+
+  <!-- RULE-LEVEL -->
+  <div class="patch">
+    <h2>Attacks on the rules themselves</h2>
+    <p>A security mind attacks the scoring, not just the crypto. These are the loopholes a "creative, deviant" student will find first — with patches if you want to close them.</p>
+
+    <div class="patchrow">
+      <div class="t">Cartel collusion</div>
+      <p>Two groups quietly swap keys. Each now answers the other's challenge → both bank <span class="mono">+5</span>, and (if scoring is absolute) neither loses anything. Cooperation beats security.</p>
+      <div class="fix"><b>Patch:</b> make a leak <i>cost</i> the victim — e.g., <span class="mono">−5</span> whenever any foreign device answers your challenge. Now swapping keys is a prisoner's dilemma, not a free win.</div>
+    </div>
+
+    <div class="patchrow">
+      <div class="t">The master-spy device</div>
+      <p>One device hoards four groups' keys and scores <span class="mono">+20</span> in a single sweep. Offense scales without bound; defense caps at group size.</p>
+      <div class="fix"><b>Patch:</b> cap espionage points per group per day, or scale defense to match (e.g., a "clean sweep — no foreign device answered us" bonus) so hardening pays off too.</div>
+    </div>
+
+    <div class="patchrow">
+      <div class="t">Poisoned public code</div>
+      <p>Publish "improved, faster" software with a subtle backdoor (leaks the key on a hidden trigger, or a predictable RNG seed), hoping rival groups adopt it — then harvest everyone who did.</p>
+      <div class="fix"><b>Patch:</b> reward it! Treat it as a supply-chain lesson: any code you adopt, you must review. Bonus points for the group that spots a planted backdoor.</div>
+    </div>
+
+    <div class="patchrow">
+      <div class="t">Griefing by jamming</div>
+      <p>If standings are relative, blanket-jamming the room near the deadline suppresses rivals' <span class="mono">+1</span>s and lifts you without any theft.</p>
+      <div class="fix"><b>Patch:</b> decide up front whether scores are absolute (jamming is pure vandalism, easy to rule out) or ranked (jamming is rational — then build in jam-detection as a defended threat).</div>
+    </div>
+  </div>
+
+  <!-- WHAT IT TEACHES -->
+  <div class="teach">
+    <h2>What each move quietly teaches</h2>
+    <div class="tg">
+      <div class="tbox"><b>Kerckhoffs's principle</b><p>Public code forces security into the key alone. Home-made ciphers die on day two.</p></div>
+      <div class="tbox"><b>Out-of-band key exchange</b><p>You can't bootstrap a secret over a watched channel — the in-person key swap is the whole ballgame.</p></div>
+      <div class="tbox"><b>Don't build an oracle</b><p>Authenticate who's asking. A device that signs for anyone is as good as leaked, even with perfect crypto.</p></div>
+      <div class="tbox"><b>Relay &amp; distance bounding</b><p>Proximity isn't presence. Timing bounds are how real contactless systems resist relays.</p></div>
+      <div class="tbox"><b>Nonces &amp; replay</b><p>Freshness is why a recorded proof can't be reused — and why weak randomness is fatal.</p></div>
+      <div class="tbox"><b>Insider threat &amp; economics</b><p>The people you must trust are your biggest risk, and attackers follow incentives — defend the branch that pays them, not the one that's fun to build.</p></div>
+    </div>
+  </div>
+
+  <div class="note"><b>Two design knobs worth deciding before day one:</b> (1) <b>Absolute vs. ranked scoring</b> — it flips whether jamming and griefing are rational. (2) <b>Allow out-of-band provisioning</b> (typing/loading a secret onto devices outside the public source) — without it, the public-code rule makes confidentiality literally impossible, and the game collapses into "everyone reads everyone." Allowing it is what makes real defense possible.</div>
+
+  <div class="actions"><button class="btn" onclick="window.print()">Print / Save as PDF</button></div>
+  <div class="foot">Whisper Network Playbook · attacks paired with their defenses · use the filters to focus a discussion</div>
+
+</div>
+
+<script>
+  var cats = new Set(), skill = null;
+  function apply(){
+    document.querySelectorAll('.row').forEach(function(r){
+      var okCat = cats.size===0 || cats.has(r.dataset.cat);
+      var okSkill = !skill || r.dataset.skill===skill;
+      r.classList.toggle('hide', !(okCat && okSkill));
+    });
+  }
+  document.querySelectorAll('.chip[data-cat]').forEach(function(c){
+    c.addEventListener('click', function(){
+      var k=c.dataset.cat;
+      if(cats.has(k)){cats.delete(k);} else {cats.add(k);}
+      document.querySelectorAll('.chip[data-cat]').forEach(function(o){
+        o.classList.toggle('off', cats.size>0 && !cats.has(o.dataset.cat));
+      });
+      apply();
+    });
+  });
+  document.querySelectorAll('.chip[data-skill]').forEach(function(c){
+    c.addEventListener('click', function(){
+      var k=c.dataset.skill;
+      skill = (skill===k)? null : k;
+      document.querySelectorAll('.chip[data-skill]').forEach(function(o){
+        o.classList.toggle('off', skill!==null && o.dataset.skill!==skill);
+      });
+      apply();
+    });
+  });
+</script>
+</body>
+</html>

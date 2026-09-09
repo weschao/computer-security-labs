@@ -1,0 +1,20 @@
+{
+    "name": "tinyAES",
+    "version": "0.0.1",
+    "description": "AES-128 (tiny-AES-c) wrapped for micro:bit MakeCode. ECB + CTR.",
+    "license": "Unlicense (tiny-AES-c is public domain)",
+    "dependencies": {
+        "core": "*"
+    },
+    "files": [
+        "aes.h",
+        "aes.cpp",
+        "aes_shim.cpp",
+        "main.ts"
+    ],
+    "testFiles": [],
+    "public": true,
+    "supportedTargets": [
+        "microbit"
+    ]
+}

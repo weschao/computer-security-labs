@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whisper Network — MakeCode Build Guide</title>
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f6f7fb; --panel:#fff; --ink:#1a1d29; --muted:#5b6072; --line:#e4e7f0;
+    --accent:#4f46e5; --accent-soft:#eef0ff;
+    /* MakeCode-ish category colors */
+    --c-basic:#1e88e5; --c-input:#7c4dff; --c-radio:#e0218a; --c-logic:#2e9e5b;
+    --c-loop:#00a3a3; --c-var:#e08600; --c-math:#8e44ad;
+    --crypto:#2563eb; --radio2:#0d9488; --access:#a16207; --social:#d9480f; --denial:#9333ea;
+    --defend:#15803d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.55;font-size:15.5px}
+  .wrap{max-width:960px;margin:0 auto;padding:28px 20px 80px}
+  code,.mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
+  h1{font-size:26px;line-height:1.15;margin:0 0 6px;letter-spacing:-.5px}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 20px}
+  .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:4px 10px;border-radius:999px;margin-bottom:14px}
+  h2.sec{font-size:20px;margin:30px 0 4px;display:flex;align-items:center;gap:11px}
+  h2.sec .pn{width:30px;height:30px;border-radius:9px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+  .role{color:var(--muted);font-size:14px;margin:0 0 14px 41px}
+
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 18px;margin-bottom:16px}
+  .box h3{margin:0 0 8px;font-size:12.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+  ol.steps{margin:0;padding-left:20px;font-size:14px} ol.steps li{margin:4px 0}
+  ol.steps b{color:var(--ink)}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:4px 0 8px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  td .mono{background:#eef0f6;padding:1px 6px;border-radius:5px}
+
+  /* block stack */
+  .blocks{margin:4px 0 12px}
+  .blk{border-radius:8px;padding:7px 12px;margin:5px 0;font-size:13.5px;border-left:6px solid #ccc;background:#fbfbfe;position:relative}
+  .blk .cat{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:1px 6px;border-radius:4px;margin-right:8px;vertical-align:1px}
+  .blk.basic{border-color:var(--c-basic)} .blk.basic .cat{background:var(--c-basic)}
+  .blk.input{border-color:var(--c-input)} .blk.input .cat{background:var(--c-input)}
+  .blk.radio{border-color:var(--c-radio)} .blk.radio .cat{background:var(--c-radio)}
+  .blk.logic{border-color:var(--c-logic)} .blk.logic .cat{background:var(--c-logic)}
+  .blk.loop{border-color:var(--c-loop)} .blk.loop .cat{background:var(--c-loop)}
+  .blk.var{border-color:var(--c-var)} .blk.var .cat{background:var(--c-var)}
+  .blk.math{border-color:var(--c-math)} .blk.math .cat{background:var(--c-math)}
+  .blk.event{font-weight:700;background:#f2f2fb}
+  .ind1{margin-left:22px} .ind2{margin-left:44px} .ind3{margin-left:66px}
+  .blk .mono{background:rgba(0,0,0,.05);padding:0 4px;border-radius:4px}
+
+  pre{background:#0f1320;color:#e6e8f2;border-radius:12px;padding:14px 16px;overflow:auto;font-size:12.6px;line-height:1.5;margin:8px 0 6px}
+  pre .cm{color:#7f8bb0} pre .kw{color:#c792ea} pre .fn{color:#82aaff} pre .st{color:#c3e88d} pre .nm{color:#f78c6c}
+  .filelabel{font-size:12px;color:var(--muted);margin-top:10px}
+  .filelabel b{color:var(--ink);font-family:"SF Mono",ui-monospace,monospace}
+
+  .flaw{border-left:4px solid #d9480f;background:#fdeee6;border-radius:0 10px 10px 0;padding:10px 14px;font-size:13.6px;margin:8px 0 2px}
+  .flaw b{color:#d9480f}
+
+  details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px 16px;margin:12px 0}
+  details summary{cursor:pointer;font-weight:700;font-size:15px;padding:10px 0}
+  details[open] summary{border-bottom:1px solid var(--line);margin-bottom:10px}
+
+  .tag{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px;white-space:nowrap}
+  .t-crypto{background:#e8f0ff;color:var(--crypto)} .t-radio{background:#e2f6f3;color:var(--radio2)}
+  .t-access{background:#fbf3e0;color:var(--access)} .t-social{background:#fdeee6;color:var(--social)}
+  .t-denial{background:#f4e9fe;color:var(--denial)}
+
+  .ladder{counter-reset:step;padding:0;list-style:none;margin:6px 0}
+  .ladder li{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 14px 11px 46px;margin-bottom:8px;position:relative;font-size:14px}
+  .ladder li::before{counter-increment:step;content:counter(step);position:absolute;left:12px;top:11px;width:22px;height:22px;border-radius:50%;background:var(--defend);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .ladder li b{color:var(--ink)}
+
+  .note{font-size:13px;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:12px 15px;margin-top:18px}
+  .note b{color:var(--ink)}
+  .actions{margin:20px 0 2px}
+  .btn{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .foot{color:var(--muted);font-size:12.5px;text-align:center;margin-top:22px}
+  @media print{.actions{display:none} details{border:none} details>*{display:block!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="kicker">Whisper Network · MakeCode</span>
+  <h1>Build Guide — Sender &amp; Responder</h1>
+  <p class="sub">Two paste-ready micro:bit programs: the deliberately-insecure <b>full-power sender</b> and the <b>nonce-challenge responder</b>. Every block is shown, every weakness is on purpose, and each one links to a defense from the playbook. A companion Checker is included so you can actually score a round.</p>
+
+  <div class="box">
+    <h3>Load it in 5 steps</h3>
+    <ol class="steps">
+      <li>Open <b>makecode.microbit.org</b> → <b>New Project</b>.</li>
+      <li>Click the <b>{} JavaScript</b> toggle at the top of the editor.</li>
+      <li>Paste the code for one program (from the attached <span class="mono">.ts</span> files, or the blocks below).</li>
+      <li>Flip back to <b>Blocks</b> to see and edit it visually.</li>
+      <li><b>Download</b> the <span class="mono">.hex</span> and drag it onto the MICROBIT drive. Set <span class="mono">CELL</span> per device; set <span class="mono">KEY</span> on the sender each day.</li>
+    </ol>
+  </div>
+
+  <div class="box">
+    <h3>The wire protocol (all three programs share it)</h3>
+    <table>
+      <tr><th>Message</th><th>Name field</th><th>Value</th><th>Sent by</th></tr>
+      <tr><td>Key delivery</td><td><span class="mono">"key" + cell</span></td><td>the day's key</td><td>Sender</td></tr>
+      <tr><td>Challenge</td><td><span class="mono">"chal" + cell</span></td><td>fresh nonce</td><td>Checker</td></tr>
+      <tr><td>Response</td><td><span class="mono">"resp" + cell</span></td><td>the proof</td><td>Responder</td></tr>
+    </table>
+    <div style="font-size:13.3px;color:var(--muted)">Everyone shares one radio channel (<span class="mono">CHANNEL = 7</span>), so <b>all traffic is public by default</b> — messages are told apart by the name field, not by who can hear them. Proof (starter) = <span class="mono">(key + nonce) % 1000000</span>. The whole class is one big party line; that is the point.</div>
+  </div>
+
+  <!-- PROGRAM 1 -->
+  <h2 class="sec"><span class="pn">1</span> Full-Power Sender</h2>
+  <p class="role">Broadcasts the key at max power, in the clear. Run it on your device to seed a cell, or hand it to a member to propagate to teammates. Press <b>A</b> to send.</p>
+
+  <div class="blocks">
+    <div class="blk event basic"><span class="cat">Basic</span>on start</div>
+    <div class="blk var ind1"><span class="cat">Var</span>set <span class="mono">CHANNEL</span> to <span class="mono">7</span> · set <span class="mono">CELL</span> to <span class="mono">1</span> · set <span class="mono">KEY</span> to <span class="mono">482913</span></div>
+    <div class="blk radio ind1"><span class="cat">Radio</span>radio set group <span class="mono">CHANNEL</span></div>
+    <div class="blk radio ind1"><span class="cat">Radio</span>radio set transmit power <span class="mono">7</span> &nbsp;← max range = maximally leaky</div>
+    <div class="blk basic ind1"><span class="cat">Basic</span>show string <span class="mono">"S"</span></div>
+    <div class="blk event input"><span class="cat">Input</span>on button <span class="mono">A</span> pressed</div>
+    <div class="blk loop ind1"><span class="cat">Loop</span>repeat <span class="mono">5</span> times &nbsp;← radio is lossy, so resend</div>
+    <div class="blk radio ind2"><span class="cat">Radio</span>radio send value <span class="mono">join("key", CELL)</span> = <span class="mono">KEY</span></div>
+    <div class="blk basic ind2"><span class="cat">Basic</span>pause <span class="mono">100</span> ms</div>
+    <div class="blk basic ind1"><span class="cat">Basic</span>show icon <span class="mono">✓</span></div>
+  </div>
+
+  <pre><span class="cm">// Full-power sender — press A to broadcast the key.</span>
+<span class="kw">let</span> CHANNEL = <span class="nm">7</span>      <span class="cm">// shared class channel</span>
+<span class="kw">let</span> CELL = <span class="nm">1</span>         <span class="cm">// this cell's id — change per team</span>
+<span class="kw">let</span> KEY = <span class="nm">482913</span>     <span class="cm">// the day's secret — instructor sets this</span>
+
+radio.<span class="fn">setGroup</span>(CHANNEL)
+radio.<span class="fn">setTransmitPower</span>(<span class="nm">7</span>)     <span class="cm">// 7 = full power</span>
+basic.<span class="fn">showString</span>(<span class="st">"S"</span>)
+
+input.<span class="fn">onButtonPressed</span>(Button.A, <span class="kw">function</span> () {
+    <span class="kw">for</span> (<span class="kw">let</span> i = <span class="nm">0</span>; i &lt; <span class="nm">5</span>; i++) {
+        radio.<span class="fn">sendValue</span>(<span class="st">"key"</span> + CELL, KEY)
+        basic.<span class="fn">pause</span>(<span class="nm">100</span>)
+    }
+    basic.<span class="fn">showIcon</span>(IconNames.Yes)
+})</pre>
+  <div class="filelabel">Attached file: <b>whisper-sender.ts</b></div>
+  <div class="flaw"><b>Built-in flaws (on purpose):</b> full power = anyone in the room hears it; plaintext = the key is readable by every device; no check on who's listening = imposters store it too.</div>
+
+  <!-- PROGRAM 2 -->
+  <h2 class="sec"><span class="pn">2</span> Nonce-Challenge Responder</h2>
+  <p class="role">Runs on every student device. Stores the cell's key when it arrives, then answers the Checker's challenge with a proof. Shows ✓ when it holds the key, ◆ when it answers.</p>
+
+  <div class="blocks">
+    <div class="blk event basic"><span class="cat">Basic</span>on start</div>
+    <div class="blk var ind1"><span class="cat">Var</span>set <span class="mono">CHANNEL</span> to <span class="mono">7</span> · <span class="mono">CELL</span> to <span class="mono">1</span> · <span class="mono">KEY</span> to <span class="mono">0</span> · <span class="mono">haveKey</span> to <span class="mono">false</span></div>
+    <div class="blk radio ind1"><span class="cat">Radio</span>radio set group <span class="mono">CHANNEL</span> · set transmit power <span class="mono">7</span> · set transmit serial number <span class="mono">ON</span></div>
+    <div class="blk basic ind1"><span class="cat">Basic</span>show string <span class="mono">"R"</span></div>
+    <div class="blk event radio"><span class="cat">Radio</span>on radio received <span class="mono">name</span>, <span class="mono">value</span></div>
+    <div class="blk logic ind1"><span class="cat">Logic</span>if <span class="mono">name = join("key", CELL)</span></div>
+    <div class="blk var ind2"><span class="cat">Var</span>set <span class="mono">KEY</span> to <span class="mono">value</span> · set <span class="mono">haveKey</span> to <span class="mono">true</span></div>
+    <div class="blk basic ind2"><span class="cat">Basic</span>show icon <span class="mono">✓</span> &nbsp;← "I hold today's key"</div>
+    <div class="blk logic ind1"><span class="cat">Logic</span>else if <span class="mono">name = join("chal", CELL)</span></div>
+    <div class="blk logic ind2"><span class="cat">Logic</span>if <span class="mono">haveKey</span></div>
+    <div class="blk math ind3"><span class="cat">Math</span>set <span class="mono">response</span> to remainder of <span class="mono">(KEY + value) ÷ 1000000</span></div>
+    <div class="blk radio ind3"><span class="cat">Radio</span>radio send value <span class="mono">join("resp", CELL)</span> = <span class="mono">response</span></div>
+    <div class="blk basic ind3"><span class="cat">Basic</span>show icon <span class="mono">◆</span></div>
+  </div>
+
+  <pre><span class="cm">// Nonce-challenge responder — stores the key, proves knowledge.</span>
+<span class="kw">let</span> CHANNEL = <span class="nm">7</span>
+<span class="kw">let</span> CELL = <span class="nm">1</span>
+<span class="kw">let</span> KEY = <span class="nm">0</span>
+<span class="kw">let</span> haveKey = <span class="kw">false</span>
+
+radio.<span class="fn">setGroup</span>(CHANNEL)
+radio.<span class="fn">setTransmitPower</span>(<span class="nm">7</span>)
+radio.<span class="fn">setTransmitSerialNumber</span>(<span class="kw">true</span>)   <span class="cm">// so the Checker sees who answered</span>
+basic.<span class="fn">showString</span>(<span class="st">"R"</span>)
+
+radio.<span class="fn">onReceivedValue</span>(<span class="kw">function</span> (name, value) {
+    <span class="kw">if</span> (name == <span class="st">"key"</span> + CELL) {
+        KEY = value
+        haveKey = <span class="kw">true</span>
+        basic.<span class="fn">showIcon</span>(IconNames.Yes)
+    } <span class="kw">else if</span> (name == <span class="st">"chal"</span> + CELL) {
+        <span class="kw">if</span> (haveKey) {
+            <span class="kw">let</span> nonce = value
+            <span class="kw">let</span> response = (KEY + nonce) % <span class="nm">1000000</span>   <span class="cm">// TOY proof — weak on purpose</span>
+            radio.<span class="fn">sendValue</span>(<span class="st">"resp"</span> + CELL, response)
+            basic.<span class="fn">showIcon</span>(IconNames.SmallDiamond)
+        }
+    }
+})</pre>
+  <div class="filelabel">Attached file: <b>whisper-responder.ts</b></div>
+  <div class="flaw"><b>Built-in flaws (on purpose):</b> the proof <span class="mono">(KEY+nonce)%1000000</span> leaks <span class="mono">KEY mod 1000000</span> to anyone who sniffs a single response — so one overheard answer lets a rival forge all future answers for that cell. It also answers <i>any</i> challenger (a signing oracle) and never stops responding.</div>
+
+  <!-- COMPANION -->
+  <details>
+    <summary>Companion: the Checker (needed to run the sweep &amp; score)</summary>
+    <p style="font-size:14px;color:var(--muted);margin:0 0 8px">A = challenge the current cell with a fresh nonce · B = advance to the next cell. Open the MakeCode serial console to log which device answered — if a device from another cell answers correctly, that cell earns <b>+5</b>.</p>
+    <pre><span class="kw">let</span> CHANNEL = <span class="nm">7</span>
+<span class="cm">// instructor's private copy of each cell's key; index = cell id, [0] unused</span>
+<span class="kw">let</span> cellKeys = [<span class="nm">0</span>, <span class="nm">482913</span>, <span class="nm">771002</span>, <span class="nm">155630</span>]
+
+radio.<span class="fn">setGroup</span>(CHANNEL)
+radio.<span class="fn">setTransmitPower</span>(<span class="nm">7</span>)
+<span class="kw">let</span> currentCell = <span class="nm">1</span>, nonce = <span class="nm">0</span>, expected = <span class="nm">0</span>
+
+input.<span class="fn">onButtonPressed</span>(Button.A, <span class="kw">function</span> () {
+    nonce = Math.<span class="fn">randomRange</span>(<span class="nm">100000</span>, <span class="nm">999999</span>)          <span class="cm">// weak RNG — a lesson</span>
+    expected = (cellKeys[currentCell] + nonce) % <span class="nm">1000000</span>
+    radio.<span class="fn">sendValue</span>(<span class="st">"chal"</span> + currentCell, nonce)
+    basic.<span class="fn">showNumber</span>(currentCell)
+})
+input.<span class="fn">onButtonPressed</span>(Button.B, <span class="kw">function</span> () {
+    currentCell = currentCell + <span class="nm">1</span>
+    basic.<span class="fn">showNumber</span>(currentCell)
+})
+radio.<span class="fn">onReceivedValue</span>(<span class="kw">function</span> (name, value) {
+    <span class="kw">if</span> (name == <span class="st">"resp"</span> + currentCell) {
+        <span class="kw">let</span> who = radio.<span class="fn">receivedPacket</span>(RadioPacketProperty.SerialNumber)
+        basic.<span class="fn">showIcon</span>(value == expected ? IconNames.Yes : IconNames.No)
+        serial.<span class="fn">writeValue</span>(<span class="st">"device"</span>, who)
+        serial.<span class="fn">writeValue</span>(<span class="st">"correct"</span>, value == expected ? <span class="nm">1</span> : <span class="nm">0</span>)
+    }
+})</pre>
+    <div class="filelabel">Attached file: <b>whisper-checker.ts</b></div>
+  </details>
+
+  <!-- SPY MOD -->
+  <details>
+    <summary>One-line idea: turn the responder into a +5 spy</summary>
+    <p style="font-size:14px;color:var(--muted);margin:0 0 8px">Because the default channel is plaintext, a device can quietly store <i>every</i> key it overhears and answer <i>any</i> cell's challenge. This is the espionage payoff in the scoring — and a vivid demo of why the plaintext default is fatal.</p>
+    <pre><span class="kw">let</span> keys: number[] = []
+<span class="kw">let</span> known: boolean[] = []
+radio.<span class="fn">onReceivedValue</span>(<span class="kw">function</span> (name, value) {
+    <span class="kw">for</span> (<span class="kw">let</span> g = <span class="nm">1</span>; g &lt;= <span class="nm">12</span>; g++) {
+        <span class="kw">if</span> (name == <span class="st">"key"</span> + g) { keys[g] = value; known[g] = <span class="kw">true</span> }
+        <span class="kw">if</span> (name == <span class="st">"chal"</span> + g &amp;&amp; known[g]) {
+            radio.<span class="fn">sendValue</span>(<span class="st">"resp"</span> + g, (keys[g] + value) % <span class="nm">1000000</span>)
+        }
+    }
+})</pre>
+  </details>
+
+  <!-- WEAKNESS MAP -->
+  <h2 class="sec" style="font-size:19px"><span class="pn" style="background:var(--social)">✗</span> The flaws, and their defenses</h2>
+  <p class="role" style="margin-left:41px">Every weakness below is intentional. Fixing them is the multi-day game — and each maps to a defense from the playbook.</p>
+  <table>
+    <tr><th>Weakness in the starter</th><th>What breaks it</th><th>The fix</th><th></th></tr>
+    <tr><td>Transmit power = 7 (full)</td><td>Anyone in the room overhears the seed</td><td>Lower <span class="mono">setTransmitPower</span>; seed at arm's length</td><td><span class="tag t-radio">Radio</span></td></tr>
+    <tr><td>Key sent in plaintext</td><td>Passive sniffer reads the key directly</td><td>Encrypt under a cell key shared in person</td><td><span class="tag t-crypto">Crypto</span></td></tr>
+    <tr><td>Shared channel, no membership check</td><td>Imposters store your key; you store theirs</td><td>Authenticate membership before sharing</td><td><span class="tag t-access">Access</span></td></tr>
+    <tr><td>Proof <span class="mono">(KEY+nonce)%1e6</span></td><td>Leaks the key from one sniffed response; forgeable</td><td>Real keyed MAC; never derive the proof linearly from the key</td><td><span class="tag t-crypto">Crypto</span></td></tr>
+    <tr><td>Answers any challenger, forever</td><td>Relay / signing-oracle attacks for the +5</td><td>Authenticate the Checker; lock after your sweep</td><td><span class="tag t-crypto">Protocol</span></td></tr>
+    <tr><td><span class="mono">Math.randomRange</span> nonce</td><td>Predictable nonce → precompute / replay</td><td>Strong, unpredictable nonce (Checker side)</td><td><span class="tag t-crypto">Crypto</span></td></tr>
+    <tr><td>32-bit numeric "key"</td><td>Not the 128-bit key the game specifies</td><td>Send four 32-bit chunks and reassemble</td><td><span class="tag t-crypto">Crypto</span></td></tr>
+    <tr><td>No defense against jamming</td><td>Flood the channel so a member never receives</td><td>Retries, redundant senders, physical fallback</td><td><span class="tag t-denial">Denial</span></td></tr>
+  </table>
+
+  <!-- EXTENSIONS -->
+  <h2 class="sec" style="font-size:19px"><span class="pn" style="background:var(--defend)">↑</span> The improvement ladder</h2>
+  <p class="role" style="margin-left:41px">A rough order of difficulty for students hardening their cell, each rung buildable in blocks.</p>
+  <ol class="ladder">
+    <li><b>Turn down the volume.</b> Drop transmit power and seed devices held together — shrink who can even hear you.</li>
+    <li><b>Stop being an oracle.</b> Only answer a challenge that carries a shared "Checker tag," and go silent once you've been scored.</li>
+    <li><b>Pre-share a cell key in person</b>, then send the day-key XOR a shared keystream instead of in the clear — a first real taste of encryption.</li>
+    <li><b>Replace the toy proof</b> so the response reveals nothing about the key (mix in the full nonce, device id, and cell key; add a real MAC extension if you want the genuine article).</li>
+    <li><b>Go full 128-bit.</b> Split the key into four chunks, send with an index, reassemble on the far side.</li>
+    <li><b>Survive denial.</b> Add retries, let any member re-seed a straggler, and detect a jammed channel.</li>
+  </ol>
+
+  <div class="note"><b>Two gotchas to warn students about.</b> micro:bit radio is lossy and has no acknowledgements — that is why the sender resends in a loop; build retries into anything that matters. And a single radio <span class="mono">value</span> is a ~32-bit number, so the buildable starter uses a 32-bit "key"; reaching the game's true 128-bit key means chunking (rung 5). Neither limit is a bug — both are teachable constraints.</div>
+
+  <div class="actions"><button class="btn" onclick="window.print()">Print / Save as PDF</button></div>
+  <div class="foot">Whisper Network build guide · sender + responder + checker · paste into makecode.microbit.org</div>
+
+</div>
+</body>
+</html>

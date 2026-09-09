@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Threat Model Lab — Making the Secret-Number Game Real</title>
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f6f7fb;
+    --panel:#ffffff;
+    --ink:#1a1d29;
+    --muted:#5b6072;
+    --line:#e4e7f0;
+    --accent:#4f46e5;
+    --accent-soft:#eef0ff;
+    /* attack category colors */
+    --tech:#2563eb;      --tech-bg:#e8f0ff;
+    --access:#0d9488;    --access-bg:#e2f6f3;
+    --social:#d9480f;    --social-bg:#fdeee6;
+    --avail:#9333ea;     --avail-bg:#f4e9fe;
+    --defend:#15803d;    --defend-bg:#e7f6ec;
+    --deviant:#b91c1c;   --deviant-bg:#fdeaea;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55;font-size:15.5px;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:28px 20px 80px}
+  code,.mono{font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em}
+  h1{font-size:27px;line-height:1.15;margin:0 0 6px;letter-spacing:-.5px}
+  h2{font-size:19px;margin:0}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 22px}
+  .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:4px 10px;border-radius:999px;margin-bottom:14px}
+
+  /* core mechanic recap */
+  .recap{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:22px}
+  .recap h3{margin:0 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .rules{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  .rule{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fbfbfe}
+  .rule b{display:block;font-size:13px;letter-spacing:.03em;margin-bottom:3px}
+  .rule.c b{color:var(--tech)} .rule.a b{color:var(--avail)}
+  .rule span{font-size:13.5px;color:var(--muted)}
+  @media(max-width:640px){.rules{grid-template-columns:1fr}}
+
+  /* filter bar */
+  .filterbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0 10px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+  .filterbar .lbl{font-size:12px;color:var(--muted);margin-right:6px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;cursor:pointer;margin:3px 4px 3px 0;user-select:none;transition:.12s}
+  .chip .dot{width:9px;height:9px;border-radius:50%}
+  .chip[data-cat=tech] .dot{background:var(--tech)} .chip[data-cat=access] .dot{background:var(--access)}
+  .chip[data-cat=social] .dot{background:var(--social)} .chip[data-cat=avail] .dot{background:var(--avail)}
+  .chip.off{opacity:.32}
+  .chip:hover{border-color:var(--accent)}
+
+  /* exercise cards */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;margin:14px 0;overflow:hidden;box-shadow:0 1px 2px rgba(20,20,50,.03)}
+  .card > .head{display:flex;align-items:flex-start;gap:14px;padding:18px 20px;cursor:pointer}
+  .card .num{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .card .htext{flex:1 1 auto}
+  .card .htext .tag{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .card .htext h2{margin:1px 0 3px}
+  .card .htext p{margin:0;color:var(--muted);font-size:14px}
+  .card .toggle{flex:0 0 auto;color:var(--muted);font-size:22px;line-height:1;transition:transform .2s;margin-top:4px}
+  .card.open .toggle{transform:rotate(45deg)}
+  .body{display:none;padding:0 20px 22px;border-top:1px solid var(--line)}
+  .card.open .body{display:block}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
+  .meta{font-size:12px;background:#fbfbfe;border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+  .meta b{color:var(--ink)}
+  .meta span{color:var(--muted)}
+
+  .sec-h{font-size:12.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+  .setup{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.setup{grid-template-columns:1fr}}
+  .setup .box{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fbfbfe;font-size:14px}
+  .setup .box b{display:block;margin-bottom:4px;font-size:13px}
+
+  .callout{border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:12px 15px;font-size:14px;margin:6px 0}
+  .callout b{color:var(--accent)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px}
+  @media(max-width:720px){.cols{grid-template-columns:1fr}}
+  ul.items{list-style:none;margin:0;padding:0}
+  ul.items li{border:1px solid var(--line);border-radius:10px;padding:9px 11px 9px 12px;margin-bottom:8px;font-size:13.7px;position:relative}
+  li.hide{display:none}
+  li .cat{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;margin-right:7px;vertical-align:1px}
+  li.tech{border-left:4px solid var(--tech)} li.tech .cat{background:var(--tech-bg);color:var(--tech)}
+  li.access{border-left:4px solid var(--access)} li.access .cat{background:var(--access-bg);color:var(--access)}
+  li.social{border-left:4px solid var(--social)} li.social .cat{background:var(--social-bg);color:var(--social)}
+  li.avail{border-left:4px solid var(--avail)} li.avail .cat{background:var(--avail-bg);color:var(--avail)}
+  li.def{border-left:4px solid var(--defend)}
+  .colhead{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:9px}
+  .colhead.atk{color:var(--deviant)} .colhead.def{color:var(--defend)}
+
+  .deviant{margin-top:20px;border:1px solid #f3caca;background:var(--deviant-bg);border-radius:12px;padding:14px 16px}
+  .deviant .dh{font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--deviant);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .deviant p{margin:0 0 8px;font-size:14px}
+  .deviant p:last-child{margin-bottom:0}
+  .deviant .lead{font-weight:600}
+
+  /* framework footer */
+  .frame{background:linear-gradient(180deg,#1a1d29,#23263a);color:#e9ebf5;border-radius:18px;padding:24px 22px;margin-top:30px}
+  .frame h2{color:#fff;font-size:18px;margin-bottom:4px}
+  .frame p{color:#b9bed6;font-size:14px;margin:0 0 16px}
+  .fg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media(max-width:720px){.fg{grid-template-columns:1fr}}
+  .fbox{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:13px 15px}
+  .fbox b{color:#fff;font-size:13.5px} .fbox p{color:#aeb3cf;font-size:13px;margin:5px 0 0}
+  .takeaway{margin-top:16px;border-top:1px solid rgba(255,255,255,.12);padding-top:14px;font-size:14.5px;color:#eef0ff}
+  .takeaway b{color:#fff}
+
+  .foot{color:var(--muted);font-size:12.5px;text-align:center;margin-top:26px}
+  .actions{margin:18px 0 2px}
+  .btn{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  @media print{.filterbar,.actions,.toggle{display:none} .body{display:block!important} .card{break-inside:avoid} .frame{background:#1a1d29!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="kicker">Threat Model Lab</span>
+  <h1>Making the Secret-Number Game Real</h1>
+  <p class="sub">Four playable exercises that turn your opening thought experiment into a live, multi-day contest — designed so anyone can play, no one can win by coding alone, and "just text it to each other" doesn't work.</p>
+
+  <div class="recap">
+    <h3>The mechanic you're modeling</h3>
+    <div>Each morning one random member of a 3–5 person cell receives a hard-to-guess secret. A cell survives the day only if <b>every member knows it</b> and <b>no outsider does</b>. Those two rules are the whole of security in miniature:</div>
+    <div class="rules">
+      <div class="rule c"><b>NO OUTSIDER KNOWS → Confidentiality</b><span>Keep the secret inside the cell. Broken by eavesdropping, theft, phishing, leaks.</span></div>
+      <div class="rule a"><b>EVERY MEMBER KNOWS → Availability</b><span>Get it to all members, reliably. Broken by jamming, denial, sabotage, bad luck.</span></div>
+    </div>
+    <div style="margin-top:12px;font-size:13.5px;color:var(--muted)">The lesson your students feel in their bones: <b style="color:var(--ink)">you cannot enumerate every threat in advance.</b> You need a model, layered defenses, and an assume-breach mindset. Each exercise below makes them build one.</div>
+  </div>
+
+  <div class="filterbar">
+    <span class="lbl">Highlight attack type:</span>
+    <span class="chip" data-cat="tech"><span class="dot"></span>Technical</span>
+    <span class="chip" data-cat="access"><span class="dot"></span>Access control</span>
+    <span class="chip" data-cat="social"><span class="dot"></span>Social engineering</span>
+    <span class="chip" data-cat="avail"><span class="dot"></span>Availability / denial</span>
+  </div>
+
+  <!-- ============ EXERCISE 1 ============ -->
+  <div class="card open" id="ex1">
+    <div class="head">
+      <div class="num">1</div>
+      <div class="htext">
+        <div class="tag">micro:bit · radio · hardware</div>
+        <h2>Whisper Network</h2>
+        <p>The secret lives on a device you can't read, so it can only move by radio (sniffable) or hand-to-hand.</p>
+      </div>
+      <div class="toggle">+</div>
+    </div>
+    <div class="body">
+      <div class="chips">
+        <div class="meta"><b>Hardware:</b> <span>1 micro:bit per student</span></div>
+        <div class="meta"><b>Prep:</b> <span>Medium — flash our block program</span></div>
+        <div class="meta"><b>Coding floor:</b> <span>None (MakeCode blocks provided)</span></div>
+        <div class="meta"><b>Richest lesson:</b> <span>Key exchange & the eavesdropper</span></div>
+      </div>
+
+      <div class="sec-h">How it runs</div>
+      <div class="setup">
+        <div class="box"><b>Distribution</b>Every device is pre-flashed with the same "Cell" program and a stored student ID. Each morning the instructor's <b>Oracle</b> device pairs with one random student at arm's length (both hold A+B; the key transmits at minimum power, range ≈ a few cm). That student's device now <b>holds today's 128-bit key</b> — stored, never shown on the LEDs.</div>
+        <div class="box"><b>Verification</b>At day's end the instructor sweeps the room with a <b>Checker</b>. It sends each device a random nonce; the device replies <span class="mono">HMAC(key, nonce)</span> — proving it holds the key without ever revealing it. Cell passes iff all members answer correctly and no outsider can.</div>
+      </div>
+
+      <div class="callout"><b>Why "just text it" fails:</b> the key is a 128-bit value the device is programmed never to display, so there are no digits to screenshot or SMS. The natural way to share it is device-to-device radio — which is a <i>broadcast</i> anyone on the channel can hear. Reading the raw key at all requires dumping the firmware over USB, which becomes one of the exercise's most instructive attacks.</div>
+      <div class="callout" style="border-color:var(--access);background:var(--access-bg)"><b style="color:var(--access)">Level playing field:</b> the whole program is pre-built blocks, so a beginner and an expert start even. The challenge is <i>protocol design</i>, not syntax. Where coding skill does leak in (sniffers, USB dumps) is capped by locking the flash and running an "advanced/red-team" track for those who want it.</div>
+
+      <div class="sec-h">Attack surface &nbsp;·&nbsp; Defenses</div>
+      <div class="cols">
+        <div>
+          <div class="colhead atk">◇ How cells get broken</div>
+          <ul class="items">
+            <li class="tech"><span class="cat">Tech</span>Sit on the cell's radio group and log every packet — a 6-block sniffer captures the key in transit.</li>
+            <li class="tech"><span class="cat">Tech</span>Replay a captured proof, or relay packets as a man-in-the-middle between two members.</li>
+            <li class="tech"><span class="cat">Tech</span>USB firmware dump: plug the device into a laptop and read the key out of flash, then exfiltrate the hex.</li>
+            <li class="tech"><span class="cat">Tech</span>Spoof a rogue "Oracle" to seed a victim with a wrong key.</li>
+            <li class="access"><span class="cat">Access</span>Grab an unattended device and clone its key; borrow a teammate's "just to check."</li>
+            <li class="access"><span class="cat">Access</span>Plant a hidden spare micro:bit near a rival cell as a covert logging relay.</li>
+            <li class="social"><span class="cat">Social</span>"Let's cross-sync so we all match" — trick a rival into sharing to your device.</li>
+            <li class="social"><span class="cat">Social</span>Impersonate the instructor's protocol: "New rule — broadcast your key to confirm receipt."</li>
+            <li class="avail"><span class="cat">Denial</span>Jam the channel near the deadline so a member never receives → the cell fails the "everyone knows" rule.</li>
+            <li class="avail"><span class="cat">Denial</span>Feed a teammate a deliberately corrupted key so they flunk the audit.</li>
+          </ul>
+        </div>
+        <div>
+          <div class="colhead def">◆ How cells defend</div>
+          <ul class="items">
+            <li class="def">Establish a shared cell key <b>in person</b> at the start of the week, then encrypt the day-key before any radio send (broadcast becomes ciphertext). <i>Forces the chicken-and-egg of key exchange.</i></li>
+            <li class="def">Prefer minimum-power, proximity-only pairing over open broadcast to shrink the listening radius.</li>
+            <li class="def">Compare a short authentication string in person after pairing to catch a man-in-the-middle.</li>
+            <li class="def">Sign seed packets so a rogue Oracle is rejected; nonce+HMAC proofs defeat replay.</li>
+            <li class="def">Physical custody: never leave a device unattended; PIN-lock the "share" action.</li>
+            <li class="def">Detect jamming via packet-loss monitoring; keep a physical re-pair as fallback so denial can't be fatal.</li>
+            <li class="def">Signal survey to spot rogue relay devices in the room.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="deviant">
+        <div class="dh">☠ Through the eyes of a deviant genius</div>
+        <p class="lead">"I don't need your key if I can hear it, read it, or stop it from arriving."</p>
+        <p>Morning one, they write a sniffer that cycles all 256 radio groups and dumps every packet to serial — a live map of every cell's traffic. That single move forces the entire class to discover encryption, and then the deeper problem: how do you share the encryption key without already having a secure channel?</p>
+        <p>When they realize the raw key is extractable over USB, they build a one-click dumper, offer rivals "help syncing," and quietly keep a copy — the lesson that <b>a compromised endpoint beats good crypto every time</b>. And for pure mischief they skip stealing entirely and just <b>jam the channel at 2:55</b>, eliminating three cells via the availability rule that no one thought to defend.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ EXERCISE 2 ============ -->
+  <div class="card" id="ex2">
+    <div class="head">
+      <div class="num">2</div>
+      <div class="htext">
+        <div class="tag">web app · Google Workspace · software-only</div>
+        <h2>Blind Handoff</h2>
+        <p>The secret never leaves the server. Students can only move it by proving they're standing next to each other.</p>
+      </div>
+      <div class="toggle">+</div>
+    </div>
+    <div class="body">
+      <div class="chips">
+        <div class="meta"><b>Hardware:</b> <span>None — phones/laptops</span></div>
+        <div class="meta"><b>Prep:</b> <span>High — build the web app</span></div>
+        <div class="meta"><b>Coding floor:</b> <span>None (just clicking)</span></div>
+        <div class="meta"><b>Richest lesson:</b> <span>Auth, audit logs, anomaly detection</span></div>
+      </div>
+
+      <div class="sec-h">How it runs</div>
+      <div class="setup">
+        <div class="box"><b>Distribution</b>A school-internal web app; everyone logs in with their Workspace account (free identity + audit trail). Each morning the server marks one random cell member as today's <b>Source</b> — shown only as a status, never as a copyable value.</div>
+        <div class="box"><b>Verification</b>To pass the secret, two students trigger a <b>Handoff</b> that only completes when both browsers submit the same rotating room-code (shown on the class screen, refreshed every few seconds) while on the classroom network. The server moves custody; the client never sees the raw secret. End of day: each account must read "holds today's secret," and an AI monitor flags anomalies.</div>
+      </div>
+
+      <div class="callout"><b>Why "just text it" fails:</b> there is no secret to text — it lives server-side, bound to authenticated accounts. To gain it you must complete a proximity-gated handoff in the room. You can't SMS what you're never allowed to hold.</div>
+      <div class="callout" style="border-color:var(--access);background:var(--access-bg)"><b style="color:var(--access)">Level playing field:</b> gameplay is pure clicking. A strong programmer's instinct — inspect the network tab or the DOM to find the secret — is neutralized by keeping the value entirely server-side, so there's nothing to find. That very failure is a great "why we don't trust the client" lecture.</div>
+
+      <div class="sec-h">Attack surface &nbsp;·&nbsp; Defenses</div>
+      <div class="cols">
+        <div>
+          <div class="colhead atk">◇ How cells get broken</div>
+          <ul class="items">
+            <li class="social"><span class="cat">Social</span>Phish a teammate's Workspace login with a lookalike sign-in page.</li>
+            <li class="social"><span class="cat">Social</span>Approach the Source claiming to be a groupmate and complete a handoff you shouldn't get.</li>
+            <li class="tech"><span class="cat">Tech</span>Screenshot the rotating room-code and relay it to a confederate off-site who submits within the window — defeating "proximity."</li>
+            <li class="tech"><span class="cat">Tech</span>Share a session cookie so one login acts from two places at once.</li>
+            <li class="tech"><span class="cat">Tech</span>Inspect network/DOM hoping the secret leaks to the client; automate handoffs with a script.</li>
+            <li class="access"><span class="cat">Access</span>Log in as a teammate on a shared/left-open device.</li>
+            <li class="avail"><span class="cat">Denial</span>Simply never complete a handoff, stranding a member; or lock a rival out with repeated bad logins.</li>
+          </ul>
+        </div>
+        <div>
+          <div class="colhead def">◆ How cells defend</div>
+          <ul class="items">
+            <li class="def"><b>Server-side custody</b> — the raw secret is never sent to the browser, so client inspection finds nothing.</li>
+            <li class="def">Bind the room-code to the classroom network and give it a very short TTL so a relayed screenshot expires before it's useful.</li>
+            <li class="def">Require the server to see <i>both</i> clients on-site (network / same-Wi-Fi check) before a handoff completes.</li>
+            <li class="def">Turn on MFA and enforce the school domain to blunt phishing; teach students to check the URL.</li>
+            <li class="def">Device binding + concurrent-session detection kills cookie sharing.</li>
+            <li class="def">Both parties confirm a handoff receipt; the AI monitor flags impossible travel, one device driving many accounts, and off-network timing.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="deviant">
+        <div class="dh">☠ Through the eyes of a deviant genius</div>
+        <p class="lead">"If the system trusts identity and location, I'll fake both."</p>
+        <p>They stand up a pixel-perfect fake Workspace login, drop the link in a "class logistics" chat, and harvest a rival's credentials before lunch — the single most realistic attack in the whole unit. Meanwhile they photograph the class-screen room-code and text it to a friend at home who submits it, proving that "proximity" enforced by a shared code isn't proximity at all.</p>
+        <p>The counter — binding to the room's network, shrinking the code's lifetime, and demanding the server witness both devices on-site — walks students straight into how real systems reason about <b>presence, sessions, and trust</b>, and why audit logs are where you actually catch people.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ EXERCISE 3 ============ -->
+  <div class="card" id="ex3">
+    <div class="head">
+      <div class="num">3</div>
+      <div class="htext">
+        <div class="tag">micro:bit · embodied · lowest-tech-skill</div>
+        <h2>The Tell</h2>
+        <p>The secret is a performance, not a value — a timed motion you can't screenshot and can barely describe.</p>
+      </div>
+      <div class="toggle">+</div>
+    </div>
+    <div class="body">
+      <div class="chips">
+        <div class="meta"><b>Hardware:</b> <span>1 micro:bit per student</span></div>
+        <div class="meta"><b>Prep:</b> <span>Medium — gesture-check program</span></div>
+        <div class="meta"><b>Coding floor:</b> <span>None — memory & coordination</span></div>
+        <div class="meta"><b>Richest lesson:</b> <span>Biometrics, liveness, replay</span></div>
+      </div>
+
+      <div class="sec-h">How it runs</div>
+      <div class="setup">
+        <div class="box"><b>Distribution</b>The secret is a <b>timed motor sequence</b> — a rhythm on the A/B buttons plus tilt/shake gestures, long enough to be hard to guess. Each morning one member's device teaches them privately with on-screen arrows and makes them reproduce it. Only they learn it.</div>
+        <div class="box"><b>Verification</b>Members perform the sequence into their own device, which checks the pattern within a tolerance. <b>Live re-checks vary the challenge</b> ("perform beats 2–5" / "do it in reverse"), so a single recorded performance isn't a guaranteed pass.</div>
+      </div>
+
+      <div class="callout"><b>Why "just text it" fails:</b> a screenshot captures nothing, and a text transcription ("tap-tap-shake-tilt") drops the timing the verifier actually checks. To pass it on you basically have to teach it in person. The one channel that <i>does</i> help an attacker — video — becomes the exact thing the defense has to reason about.</div>
+      <div class="callout" style="border-color:var(--access);background:var(--access-bg)"><b style="color:var(--access)">Level playing field:</b> this is the most equalizing exercise — no code touches student hands at all. It rewards memory and coordination, so a non-programmer can be the best player in the room.</div>
+
+      <div class="sec-h">Attack surface &nbsp;·&nbsp; Defenses</div>
+      <div class="cols">
+        <div>
+          <div class="colhead atk">◇ How cells get broken</div>
+          <ul class="items">
+            <li class="tech"><span class="cat">Tech</span>Secretly film a member's performance and study it frame-by-frame to reproduce it.</li>
+            <li class="social"><span class="cat">Social</span>Shoulder-surf the private teaching session and mimic what you saw.</li>
+            <li class="social"><span class="cat">Social</span>Talk a teammate into demonstrating "one more time" where an outsider can watch.</li>
+            <li class="tech"><span class="cat">Tech</span>Brute-force a short or low-entropy gesture; probe the tolerance window until a sloppy version passes.</li>
+            <li class="avail"><span class="cat">Denial</span>Disrupt or spoof the sensor so a legitimate member can't complete their check in time.</li>
+          </ul>
+        </div>
+        <div>
+          <div class="colhead def">◆ How cells defend</div>
+          <ul class="items">
+            <li class="def">Make sequences long and high-entropy so guessing and sloppy mimicry both fail.</li>
+            <li class="def"><b>Variable live challenges</b> (random subset / reverse order) defeat a single static video recording — the classroom version of a liveness check.</li>
+            <li class="def">Learn and rehearse in private; treat filming as the primary thing to watch for.</li>
+            <li class="def">Tighten tolerance to close the "good-enough approximation" gap.</li>
+            <li class="def">Guard the verifying device so it can't be spoofed or denied at the deadline.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="deviant">
+        <div class="dh">☠ Through the eyes of a deviant genius</div>
+        <p class="lead">"If it's a biometric, I'll record it and replay it."</p>
+        <p>They hide a phone during every teaching session, build a video library of every cell's gesture, and quietly become a broker of passes. It works — until the verifier starts asking for a random slice of the sequence live, and a recording of the <i>whole</i> dance can't answer "just beats three through six, backwards." That single fix is the entire real-world story of why biometric systems need liveness detection, told in a way students never forget.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ EXERCISE 4 ============ -->
+  <div class="card" id="ex4">
+    <div class="head">
+      <div class="num">4</div>
+      <div class="htext">
+        <div class="tag">no tech · analog · zero-prep option</div>
+        <h2>Analog Cipher Relay</h2>
+        <p>Pure physical security and social engineering — no devices, no software, deployable tomorrow.</p>
+      </div>
+      <div class="toggle">+</div>
+    </div>
+    <div class="body">
+      <div class="chips">
+        <div class="meta"><b>Hardware:</b> <span>Beads / knotted cord / tiles</span></div>
+        <div class="meta"><b>Prep:</b> <span>Low — make the physical secrets</span></div>
+        <div class="meta"><b>Coding floor:</b> <span>None whatsoever</span></div>
+        <div class="meta"><b>Richest lesson:</b> <span>Chain of custody, out-of-band keys</span></div>
+      </div>
+
+      <div class="sec-h">How it runs</div>
+      <div class="setup">
+        <div class="box"><b>Distribution</b>The secret is a physical artifact that's awkward to copy from a photo — e.g., a knotted cord whose over/under crossings aren't all visible in one image, or "bead strip #7 read with an offset of 3" where the offset is given only aloud. Each morning one member privately receives it.</div>
+        <div class="box"><b>Verification</b>Each member reproduces the artifact (thread the beads, tie the knots) and presents it; the instructor compares against the master. Cell passes iff all match and no outsider can produce it.</div>
+      </div>
+
+      <div class="callout"><b>Why "just text it" fails:</b> the meaningful part resists flat capture — a photo of a knot misses hidden crossings, and the bead pattern is useless without the spoken offset. This one leans honestly on "a photo <i>helps</i> the attacker but isn't enough," which is a great contrast to the airtight digital versions and a nice segue into <b>out-of-band</b> secrets.</div>
+      <div class="callout" style="border-color:var(--access);background:var(--access-bg)"><b style="color:var(--access)">Level playing field:</b> there is nothing to program. It's the great equalizer and the easiest to run on day one while the software versions are still being built.</div>
+
+      <div class="sec-h">Attack surface &nbsp;·&nbsp; Defenses</div>
+      <div class="cols">
+        <div>
+          <div class="colhead atk">◇ How cells get broken</div>
+          <ul class="items">
+            <li class="tech"><span class="cat">Tech</span>Photograph the artifact and reconstruct it (works better than students expect).</li>
+            <li class="access"><span class="cat">Access</span>Steal the artifact, clone it, and return it before it's missed.</li>
+            <li class="access"><span class="cat">Access</span>Intercept the morning handoff before the recipient secures it.</li>
+            <li class="social"><span class="cat">Social</span>Run a "lost and found" con to collect rivals' artifacts; sweet-talk the holder into a look.</li>
+            <li class="social"><span class="cat">Social</span>Forge a convincing fake to pass verification without the real secret.</li>
+          </ul>
+        </div>
+        <div>
+          <div class="colhead def">◆ How cells defend</div>
+          <ul class="items">
+            <li class="def">Choose photo-resistant media and keep a spoken, out-of-band component (the offset) that a picture can't capture.</li>
+            <li class="def">Maintain chain of custody — never let the artifact out of hand; reproduce, don't lend.</li>
+            <li class="def">Use tamper-evident materials so theft-and-return leaves a mark.</li>
+            <li class="def">Do handoffs privately and verify the recipient before releasing.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="deviant">
+        <div class="dh">☠ Through the eyes of a deviant genius</div>
+        <p class="lead">"Physical means I can touch it, and if I can touch it, I own it."</p>
+        <p>They photograph everything within reach, and for the artifacts a camera can't fully capture they simply borrow, clone, and return. Their best move isn't technical at all: a fake "collect your materials here for safekeeping" table that funnels three cells' secrets into their hands. It's the cleanest possible demonstration that <b>the human is usually the softest part of any system</b>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FRAMEWORK FOOTER ============ -->
+  <div class="frame">
+    <h2>Tie it back to the frameworks</h2>
+    <p>However you run it, debrief with the models the game secretly taught them.</p>
+    <div class="fg">
+      <div class="fbox"><b>CIA triad</b><p>Your two rules <i>are</i> Confidentiality (no outsider) and Availability (every member). Integrity sneaks in via seeding and proofs — a corrupted key fails the audit just as surely as a missing one.</p></div>
+      <div class="fbox"><b>STRIDE</b><p>Every attack maps cleanly: Spoofing (rogue Oracle, fake login), Tampering (corrupted key), Info disclosure (sniffing), Denial of service (jamming), Elevation (stolen session). Have them tag their own attacks.</p></div>
+      <div class="fbox"><b>Attack trees</b><p>Root: "make a rival cell fail." Branch it into steal-the-secret vs. deny-the-secret, then into technical / physical / social leaves. The exercise fills the tree in for them.</p></div>
+    </div>
+    <div class="takeaway"><b>The punchline of the whole unit:</b> the students who lose are almost never beaten by the attack they defended against — they're beaten by the branch they never drew. That's why you model threats systematically instead of patching them one surprise at a time.</div>
+  </div>
+
+  <div class="actions">
+    <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+  <div class="foot">Threat Model Lab · a starting menu to adapt for your class · click any card to expand or collapse</div>
+
+</div>
+
+<script>
+  // Accordion
+  document.querySelectorAll('.card .head').forEach(function(h){
+    h.addEventListener('click', function(){ h.closest('.card').classList.toggle('open'); });
+  });
+  // Attack-category highlight filter
+  var active = new Set();
+  function apply(){
+    var any = active.size > 0;
+    document.querySelectorAll('ul.items li').forEach(function(li){
+      if(li.classList.contains('def')) return; // never hide defenses
+      var isAtk = li.classList.contains('tech')||li.classList.contains('access')||li.classList.contains('social')||li.classList.contains('avail');
+      if(!isAtk) return;
+      var show = !any || [...active].some(function(c){ return li.classList.contains(c); });
+      li.classList.toggle('hide', !show);
+    });
+  }
+  document.querySelectorAll('.chip').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      var c = chip.dataset.cat;
+      if(active.has(c)){ active.delete(c); chip.classList.add('off'); }
+      else { active.add(c); chip.classList.remove('off'); }
+      // if some are active, dim the rest
+      document.querySelectorAll('.chip').forEach(function(o){
+        if(active.size>0 && !active.has(o.dataset.cat)) o.classList.add('off');
+        else if(active.size===0) o.classList.remove('off');
+      });
+      apply();
+    });
+  });
+</script>
+</body>
+</html>
